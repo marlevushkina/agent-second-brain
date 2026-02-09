@@ -627,15 +627,22 @@ CRITICAL STYLE RULE:
             logger.exception("Unexpected error during content seeds generation")
             return {"error": str(e), "processed_entries": 0}
 
-    def _load_latest_seeds(self) -> str:
-        """Load the most recent content seeds file."""
+    def _load_all_seeds(self, max_weeks: int = 8) -> str:
+        """Load accumulated content seeds from recent weeks.
+
+        Reads up to max_weeks of seed files so unused seeds
+        carry over and can be selected in future plans.
+        """
         seeds_dir = self.vault_path / "content" / "seeds"
         if not seeds_dir.exists():
             return ""
-        seed_files = sorted(seeds_dir.glob("*.md"), reverse=True)
-        if seed_files:
-            return seed_files[0].read_text()
-        return ""
+        seed_files = sorted(seeds_dir.glob("*.md"), reverse=True)[:max_weeks]
+        if not seed_files:
+            return ""
+        parts = []
+        for f in seed_files:
+            parts.append(f"=== {f.stem} ===\n{f.read_text()}")
+        return "\n\n".join(parts)
 
     def _load_content_planner_skill(self) -> str:
         """Load content-planner skill content."""
@@ -685,7 +692,7 @@ week: {year}-W{week:02d}
         # Load skill and context
         skill_content = self._load_content_planner_skill()
         humanizer_content = self._load_humanizer_reference()
-        seeds_content = self._load_latest_seeds()
+        seeds_content = self._load_all_seeds()
         monthly_goals = self._load_monthly_goals()
 
         if not seeds_content:
