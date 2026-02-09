@@ -194,9 +194,8 @@ CRITICAL OUTPUT FORMAT:
                     "--dangerously-skip-permissions",
                     "--mcp-config",
                     str(self._mcp_config_path),
-                    "-p",
-                    prompt,
                 ],
+                input=prompt,
                 cwd=self.vault_path.parent,
                 capture_output=True,
                 text=True,
@@ -302,9 +301,8 @@ EXECUTION:
                     "--dangerously-skip-permissions",
                     "--mcp-config",
                     str(self._mcp_config_path),
-                    "-p",
-                    prompt,
                 ],
+                input=prompt,
                 cwd=self.vault_path.parent,
                 capture_output=True,
                 text=True,
@@ -382,9 +380,8 @@ CRITICAL OUTPUT FORMAT:
                     "--dangerously-skip-permissions",
                     "--mcp-config",
                     str(self._mcp_config_path),
-                    "-p",
-                    prompt,
                 ],
+                input=prompt,
                 cwd=self.vault_path.parent,
                 capture_output=True,
                 text=True,
@@ -450,7 +447,8 @@ CRITICAL OUTPUT FORMAT:
                     if content.strip():
                         parts.append(f"=== DAILY {day.isoformat()} ===\n{content}")
 
-        # Collect meeting transcripts
+        # Collect meeting transcripts (truncate to avoid huge prompts)
+        max_meeting_chars = 5000
         meetings_dir = self.vault_path / "content" / "meetings"
         if meetings_dir.exists():
             cutoff = today - timedelta(days=days)
@@ -461,6 +459,8 @@ CRITICAL OUTPUT FORMAT:
                     if file_date >= cutoff:
                         content = md_file.read_text()
                         if content.strip():
+                            if len(content) > max_meeting_chars:
+                                content = content[:max_meeting_chars] + "\n...(обрезано)"
                             parts.append(
                                 f"=== MEETING {md_file.stem} ===\n{content}"
                             )
@@ -586,9 +586,8 @@ CRITICAL STYLE RULE:
                     "claude",
                     "--print",
                     "--dangerously-skip-permissions",
-                    "-p",
-                    prompt,
                 ],
+                input=prompt,
                 cwd=self.vault_path.parent,
                 capture_output=True,
                 text=True,
@@ -747,9 +746,8 @@ CRITICAL STYLE RULE:
                     "claude",
                     "--print",
                     "--dangerously-skip-permissions",
-                    "-p",
-                    prompt,
                 ],
+                input=prompt,
                 cwd=self.vault_path.parent,
                 capture_output=True,
                 text=True,
