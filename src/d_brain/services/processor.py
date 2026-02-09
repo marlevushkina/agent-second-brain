@@ -421,12 +421,24 @@ CRITICAL OUTPUT FORMAT:
             logger.exception("Unexpected error during weekly digest")
             return {"error": str(e), "processed_entries": 0}
 
-    def _summarize_meeting(self, name: str, text: str) -> str:
+    def _summarize_meeting(self, name: str, text: str, cache_dir: Path | None = None) -> str:
         """Summarize a long meeting transcript via Claude.
+
+        Caches the summary next to the original file so repeated
+        /content runs don't re-summarize the same meetings.
 
         Returns a concise summary with key insights, decisions, and
         interesting thoughts — so nothing important is lost.
         """
+        # Check cache first
+        if cache_dir:
+            cache_file = cache_dir / f"{name}.summary.md"
+            if cache_file.exists():
+                cached = cache_file.read_text()
+                if cached.strip():
+                    logger.info("Using cached summary for %s", name)
+                    return f"[SUMMARY]\n{cached}"
+
         prompt = (
             "Ты суммаризатор встреч. Извлеки из транскрипта ВСЕ ключевые мысли, "
             "решения, инсайты, интересные идеи и цитаты. Ничего важного не пропускай.\n\n"
@@ -447,6 +459,13 @@ CRITICAL OUTPUT FORMAT:
             if result.returncode == 0 and result.stdout.strip():
                 summary = result.stdout.strip()
                 logger.info("Summarized meeting %s: %d → %d chars", name, len(text), len(summary))
+                # Save to cache
+                if cache_dir:
+                    try:
+                        cache_file = cache_dir / f"{name}.summary.md"
+                        cache_file.write_text(summary)
+                    except Exception as e:
+                        logger.warning("Failed to cache summary for %s: %s", name, e)
                 return f"[SUMMARY]\n{summary}"
         except Exception as e:
             logger.warning("Failed to summarize meeting %s: %s", name, e)
@@ -479,19 +498,22 @@ CRITICAL OUTPUT FORMAT:
                     if content.strip():
                         parts.append(f"=== DAILY {day.isoformat()} ===\n{content}")
 
-        # Collect meeting transcripts — summarize large ones first
+        # Collect meeting transcripts — summarize large ones (with cache)
         meetings_dir = self.vault_path / "content" / "meetings"
         if meetings_dir.exists():
             cutoff = today - timedelta(days=days)
             for md_file in sorted(meetings_dir.glob("*.md"), reverse=True):
-                # Filename starts with YYYY-MM-DD
+                if md_file.name.endswith(".summary.md"):
+                    continue  # skip cached summaries
                 try:
                     file_date = date.fromisoformat(md_file.name[:10])
                     if file_date >= cutoff:
                         content = md_file.read_text()
                         if content.strip():
                             if len(content) > 5000:
-                                content = self._summarize_meeting(md_file.stem, content)
+                                content = self._summarize_meeting(
+                                    md_file.stem, content, cache_dir=meetings_dir,
+                                )
                             parts.append(
                                 f"=== MEETING {md_file.stem} ===\n{content}"
                             )
