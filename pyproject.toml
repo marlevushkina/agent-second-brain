@@ -15,7 +15,6 @@ dependencies = [
     "pydantic-settings",
     "google-api-python-client>=2.0",
     "google-auth>=2.0",
-    "telethon>=1.36",
 ]
 
 [project.optional-dependencies]

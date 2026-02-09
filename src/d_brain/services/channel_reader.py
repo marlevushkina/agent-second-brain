@@ -1,120 +1,115 @@
-"""Telegram channel reader service using Telethon."""
+"""Telegram channel reader service via public web page."""
 
 import logging
-from datetime import date, timedelta
+import re
+from datetime import date
 from pathlib import Path
 
-from telethon import TelegramClient
-from telethon.sessions import StringSession
+import httpx
 
 logger = logging.getLogger(__name__)
 
+TG_CHANNEL_URL = "https://t.me/s/{channel}"
+
 
 class ChannelReader:
-    """Reads posts from a Telegram channel via Telethon bot API."""
+    """Reads posts from a public Telegram channel via t.me/s/ web page."""
 
-    def __init__(
-        self,
-        api_id: int,
-        api_hash: str,
-        bot_token: str,
-        channel: str,
-        vault_path: Path,
-    ) -> None:
-        self.api_id = api_id
-        self.api_hash = api_hash
-        self.bot_token = bot_token
+    def __init__(self, channel: str, vault_path: Path) -> None:
         self.channel = channel
         self.vault_path = Path(vault_path)
         self._archive_dir = self.vault_path / "content" / "channel-archive"
 
-    async def _create_client(self) -> TelegramClient:
-        """Create and authenticate a Telethon client with bot token."""
-        client = TelegramClient(StringSession(), self.api_id, self.api_hash)
-        await client.start(bot_token=self.bot_token)
-        return client
-
     async def get_recent_posts(self, limit: int = 50) -> list[dict]:
-        """Fetch recent posts from the channel.
+        """Fetch recent posts from the channel web page.
 
         Args:
-            limit: Maximum number of posts to fetch.
+            limit: Maximum number of posts to return.
 
         Returns:
-            List of post dicts with keys: id, date, text, views, forwards.
+            List of post dicts with keys: id, date, text, views.
         """
+        url = TG_CHANNEL_URL.format(channel=self.channel)
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+
+        html = resp.text
+        return self._parse_posts(html, limit)
+
+    def _parse_posts(self, html: str, limit: int) -> list[dict]:
+        """Parse posts from Telegram channel web page HTML."""
+        # Extract post IDs
+        post_ids = re.findall(
+            rf'data-post="{re.escape(self.channel)}/(\d+)"', html
+        )
+
+        # Extract texts (HTML content inside message_text divs)
+        raw_texts = re.findall(
+            r'class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
+            html,
+            re.DOTALL,
+        )
+
+        # Extract views
+        raw_views = re.findall(
+            r'class="tgme_widget_message_views">([^<]+)<', html
+        )
+
+        # Extract dates
+        raw_dates = re.findall(r'datetime="([^"]+)"', html)
+
         posts: list[dict] = []
-        client = await self._create_client()
+        count = min(len(post_ids), len(raw_texts))
 
-        try:
-            entity = await client.get_entity(self.channel)
+        for i in range(count):
+            # Strip HTML tags from text
+            clean_text = re.sub(r"<br\s*/?>", "\n", raw_texts[i])
+            clean_text = re.sub(r"<[^>]+>", "", clean_text).strip()
 
-            async for message in client.iter_messages(entity, limit=limit):
-                if not message.text:
-                    continue
+            if not clean_text:
+                continue
 
-                posts.append({
-                    "id": message.id,
-                    "date": message.date.strftime("%Y-%m-%d %H:%M"),
-                    "text": message.text,
-                    "views": message.views or 0,
-                    "forwards": message.forwards or 0,
-                })
-        finally:
-            await client.disconnect()
+            # Parse views (handle K/M suffixes)
+            views = 0
+            if i < len(raw_views):
+                views = self._parse_views(raw_views[i].strip())
+
+            # Parse date
+            post_date = ""
+            if i < len(raw_dates):
+                post_date = raw_dates[i][:10]  # YYYY-MM-DD
+
+            posts.append({
+                "id": int(post_ids[i]),
+                "date": post_date,
+                "text": clean_text,
+                "views": views,
+            })
+
+        # Return most recent first, limited
+        posts.reverse()
+        posts = posts[:limit]
 
         logger.info("Fetched %d posts from @%s", len(posts), self.channel)
         return posts
 
-    async def get_posts_since(self, days: int = 30) -> list[dict]:
-        """Fetch posts from the last N days.
-
-        Args:
-            days: Number of days to look back.
-
-        Returns:
-            List of post dicts.
-        """
-        from datetime import datetime, timezone
-
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        posts: list[dict] = []
-        client = await self._create_client()
-
+    @staticmethod
+    def _parse_views(views_str: str) -> int:
+        """Parse view count string like '1.2K' or '15' into int."""
+        views_str = views_str.strip().upper()
+        if views_str.endswith("K"):
+            return int(float(views_str[:-1]) * 1000)
+        if views_str.endswith("M"):
+            return int(float(views_str[:-1]) * 1_000_000)
         try:
-            entity = await client.get_entity(self.channel)
-
-            async for message in client.iter_messages(
-                entity, offset_date=cutoff, reverse=True
-            ):
-                if not message.text:
-                    continue
-
-                posts.append({
-                    "id": message.id,
-                    "date": message.date.strftime("%Y-%m-%d %H:%M"),
-                    "text": message.text,
-                    "views": message.views or 0,
-                    "forwards": message.forwards or 0,
-                })
-        finally:
-            await client.disconnect()
-
-        logger.info(
-            "Fetched %d posts from @%s (last %d days)",
-            len(posts), self.channel, days,
-        )
-        return posts
+            return int(views_str)
+        except ValueError:
+            return 0
 
     async def save_to_vault(self, posts: list[dict]) -> Path:
-        """Save posts to vault/content/channel-archive/ as markdown.
-
-        Args:
-            posts: List of post dicts from get_recent_posts().
-
-        Returns:
-            Path to the saved archive file.
-        """
+        """Save posts to vault/content/channel-archive/ as markdown."""
         self._archive_dir.mkdir(parents=True, exist_ok=True)
 
         today = date.today().isoformat()
@@ -147,15 +142,7 @@ class ChannelReader:
         return archive_path
 
     def format_for_prompt(self, posts: list[dict], limit: int = 20) -> str:
-        """Format posts for inclusion in Claude prompt.
-
-        Args:
-            posts: List of post dicts.
-            limit: Max posts to include.
-
-        Returns:
-            Formatted string for prompt injection.
-        """
+        """Format posts for inclusion in Claude prompt."""
         if not posts:
             return ""
 
@@ -172,14 +159,7 @@ class ChannelReader:
     async def generate_tone_examples(self, limit: int = 50) -> Path:
         """Fetch posts and save best ones as tone-of-voice examples.
 
-        Selects posts with the most views (engagement = good writing)
-        and saves them to the content-seeds references.
-
-        Args:
-            limit: Number of posts to fetch for selection.
-
-        Returns:
-            Path to the generated tone-examples.md file.
+        Selects posts with the most views (engagement = best writing).
         """
         posts = await self.get_recent_posts(limit=limit)
         if not posts:

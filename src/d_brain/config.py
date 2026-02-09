@@ -40,14 +40,6 @@ class Settings(BaseSettings):
         default=False,
         description="Whether to allow access to all users (security risk!)",
     )
-    telegram_api_id: int = Field(
-        default=0,
-        description="Telegram API ID from my.telegram.org (for channel reading)",
-    )
-    telegram_api_hash: str = Field(
-        default="",
-        description="Telegram API Hash from my.telegram.org (for channel reading)",
-    )
     telegram_channel: str = Field(
         default="",
         description="Telegram channel username to read posts from (e.g. letsboss)",

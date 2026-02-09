@@ -29,15 +29,12 @@ async def cmd_plan(message: Message) -> None:
 
     # Step 1: Read channel posts (if configured)
     channel_posts_text = ""
-    if settings.telegram_api_id and settings.telegram_api_hash and settings.telegram_channel:
+    if settings.telegram_channel:
         try:
             await status_msg.edit_text("⏳ Читаю последние посты из канала...")
             from d_brain.services.channel_reader import ChannelReader
 
             reader = ChannelReader(
-                api_id=settings.telegram_api_id,
-                api_hash=settings.telegram_api_hash,
-                bot_token=settings.telegram_bot_token,
                 channel=settings.telegram_channel,
                 vault_path=settings.vault_path,
             )
