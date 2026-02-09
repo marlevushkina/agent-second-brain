@@ -58,7 +58,7 @@ See [[goals/2-monthly]] for monthly priorities.
 
 ```
 goals/0-vision-3y.md    → 3-year vision by life areas
-goals/1-yearly-2025.md  → Annual goals + quarterly breakdown
+goals/1-yearly-2026.md  → Annual goals + quarterly breakdown
 goals/2-monthly.md      → Current month's top 3 priorities
 goals/3-weekly.md       → This week's focus + ONE Big Thing
 ```

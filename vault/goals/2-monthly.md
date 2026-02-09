@@ -1,95 +1,68 @@
 ---
 type: monthly
-period: YYYY-MM
-updated: YYYY-MM-DD
+period: 2026-02
+updated: 2026-02-09
 ---
 
-# Monthly Focus
+# Monthly Focus — Февраль 2026
 
 ## Top 3 Priorities
 
-### Priority 1: [Your Top Priority]
-<!-- What MUST happen this month? -->
+### Priority 1: Менторство — взять ещё 1 клиента
 
-**Why it matters:** [connection to yearly goal]
+**Why it matters:** Фаза 1 стратегии — набрать 5-7 CMO-клиентов для стабильного дохода 1 000-1 750€/месяц
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Написать 2-3 поста про менторство (LinkedIn/Telegram)
+- [ ] Персональный outreach: 5-10 сообщений потенциальным клиентам
+- [ ] Провести discovery call с новым лидом
+- [ ] Вести CRM с лидами
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:** +1 новый клиент на менторстве (итого 4 клиента)
 
 ---
 
-### Priority 2: [Second Priority]
+### Priority 2: C-growth — найм и онбординг ивент-менеджера
 
-**Why it matters:** [connection to yearly goal]
+**Why it matters:** Делегирование операционки C-growth для освобождения времени (подготовка к Фазе 2)
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Опубликовать вакансию / найти кандидата
+- [ ] Провести собеседования
+- [ ] Онбординг и передача текущих ивентов
+- [ ] Передать функции маркетологу (уже нанята в январе)
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:** Ивент-менеджер работает, я не занимаюсь операционкой ивентов
 
 ---
 
-### Priority 3: [Third Priority]
+### Priority 3: AI & автоматизация — Second Brain
 
-**Why it matters:** [connection to yearly goal]
+**Why it matters:** Инструмент для capture мыслей и задач, экономия времени на обработку
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Задеплоить Second Brain на VPS
+- [ ] Настроить бот и проверить базовые функции
+- [ ] Начать использовать для ежедневных записей
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:** Бот работает, я записываю голосовые каждый день
 
 ---
 
 ## NOT Doing This Month
 
-<!-- What are you consciously saying NO to? -->
--
--
--
-
----
-
-## Weekly Check-ins
-
-| Week | Progress | Blockers | Adjustments |
-|------|----------|----------|-------------|
-| W1 | | | |
-| W2 | | | |
-| W3 | | | |
-| W4 | | | |
-
----
-
-## End of Month Review
-
-**What worked:**
--
-
-**What didn't work:**
--
-
-**Key learnings:**
--
-
-**Next month focus:**
--
+- Масштабирование Клеверс (это Фаза 2, май+)
+- Превращать здоровье/семью в проект — просто живём
+- AI-трансформация Смекалки (только планёрки начинаем)
 
 ---
 
 ## Links
 
 - [[0-vision-3y]] - 3-year vision
-- [[1-yearly-2025]] - Annual goals
+- [[1-yearly-2026]] - Annual goals
 - [[3-weekly]] - This week's plan
 
 ---
 
-*Next Review: End of month*
+*Next Review: End of February*

@@ -1,25 +1,23 @@
 ---
 type: weekly
-week: YYYY-WWW
-updated: YYYY-MM-DD
+week: 2026-W07
+updated: 2026-02-09
 ---
 
-# Weekly Focus
+# Weekly Focus — 9-15 февраля 2026
 
 ## ONE Big Thing
 
 > **If I accomplish nothing else, I will:**
-> [Single most important outcome for this week]
-
-<!-- This is read by the bot during daily processing -->
+> Задеплоить Second Brain и начать записывать голосовые каждый день
 
 ---
 
 ## Week at a Glance
 
-**Week:** [X] of 52
-**Energy Level:** [High/Medium/Low]
-**Available Hours:** [X] hours focused work
+**Week:** 7 of 52
+**Energy Level:** Medium
+**Available Hours:** ~15 часов focused work
 
 ---
 
@@ -27,53 +25,19 @@ updated: YYYY-MM-DD
 
 ### Must Do (Non-negotiable)
 
-- [ ] Task 1 — Связь: [[1-yearly-2025#Goal]]
-- [ ] Task 2
-- [ ] Task 3
+- [ ] Задеплоить Second Brain на VPS — Связь: [[2-monthly#Priority 3]]
+- [ ] Встреча с замом Смекалки (1,5 часа)
+- [ ] Встречи с менти (по расписанию)
 
 ### Should Do (Important)
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ] Написать пост про менторство — Связь: [[2-monthly#Priority 1]]
+- [ ] Поиск кандидатов на ивент-менеджера — Связь: [[2-monthly#Priority 2]]
 
 ### Could Do (If time permits)
 
-- [ ] Task 1
-- [ ] Task 2
-
----
-
-## Daily Plan
-
-### Monday
-
-- [ ] Task 1
-- [ ] Task 2
-
-### Tuesday
-
-- [ ] Task 1
-- [ ] Task 2
-
-### Wednesday
-
-- [ ] Task 1
-- [ ] Task 2
-
-### Thursday
-
-- [ ] Task 1
-- [ ] Task 2
-
-### Friday
-
-- [ ] Task 1
-- [ ] Task 2
-
-### Weekend
-
-- [ ] Rest / Family time
-- [ ] Optional task
+- [ ] Слот под AI и автоматизацию
+- [ ] Бег 1-2 раза
 
 ---
 
@@ -81,47 +45,16 @@ updated: YYYY-MM-DD
 
 | Day | Time | Event | Prep |
 |-----|------|-------|------|
-| Mon | | | |
-| Tue | | | |
-
----
-
-## Habits Tracker
-
-| Habit | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
-|-------|-----|-----|-----|-----|-----|-----|-----|
-| [Habit 1] | | | | | | | |
-| [Habit 2] | | | | | | | |
-| [Habit 3] | | | | | | | |
-
----
-
-## End of Week Review
-
-### What Worked
-
--
-
-### What Didn't Work
-
--
-
-### Lessons Learned
-
--
-
-### Next Week Focus
-
->
+| Пн | | Встреча с Женей — приоритеты недели | |
+| Вт | | Психолог | |
 
 ---
 
 ## Links
 
 - [[2-monthly]] - Monthly priorities
-- [[1-yearly-2025]] - Yearly goals
-- Previous: [[3-weekly-YYYY-WXX]]
+- [[1-yearly-2026]] - Yearly goals
 
 ---
 
-*Week Started: YYYY-MM-DD*
+*Week Started: 2026-02-09*
