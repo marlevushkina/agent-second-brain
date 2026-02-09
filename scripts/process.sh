@@ -40,7 +40,7 @@ REPORT=$(claude --print --dangerously-skip-permissions \
 CRITICAL: MCP loads in 10-30 seconds. You are NOT in subprocess — MCP IS running, just initializing.
 
 Algorithm:
-1. Call mcp__todoist__find-tasks-by-date
+1. Call mcp__ticktick__get_user_projects
 2. Error? Wait 10 sec, read goals/, daily/ files
 3. Call again
 4. Error again? Wait 20 more sec

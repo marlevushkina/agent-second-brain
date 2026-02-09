@@ -255,15 +255,28 @@ collect_tokens() {
         "https://console.deepgram.com/" \
         "DEEPGRAM_API_KEY"
 
-    # Todoist API Token (optional)
+    # TickTick OAuth Credentials (optional)
     prompt_token \
-        "4/4: Todoist API Token (optional)" \
+        "4/6: TickTick Client ID (optional)" \
         "For task management:
-1. Log in to todoist.com
-2. Settings → Integrations → Developer
-3. Copy the API token" \
-        "https://todoist.com/app/settings/integrations/developer" \
-        "TODOIST_API_KEY" \
+1. Register app at developer.ticktick.com
+2. Copy the Client ID" \
+        "https://developer.ticktick.com/" \
+        "TICKTICK_CLIENT_ID" \
+        "true"
+
+    prompt_token \
+        "5/6: TickTick Client Secret (optional)" \
+        "From the same developer.ticktick.com app registration" \
+        "https://developer.ticktick.com/" \
+        "TICKTICK_CLIENT_SECRET" \
+        "true"
+
+    prompt_token \
+        "6/6: TickTick Access Token (optional)" \
+        "Run: npx @alexarevalo.ai/mcp-server-ticktick auth" \
+        "https://developer.ticktick.com/" \
+        "TICKTICK_ACCESS_TOKEN" \
         "true"
 }
 
@@ -280,8 +293,10 @@ TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 # Deepgram API Key (from console.deepgram.com)
 DEEPGRAM_API_KEY=$DEEPGRAM_API_KEY
 
-# Todoist API Token (optional)
-TODOIST_API_KEY=$TODOIST_API_KEY
+# TickTick OAuth credentials (optional)
+TICKTICK_CLIENT_ID=$TICKTICK_CLIENT_ID
+TICKTICK_CLIENT_SECRET=$TICKTICK_CLIENT_SECRET
+TICKTICK_ACCESS_TOKEN=$TICKTICK_ACCESS_TOKEN
 
 # Path to vault (don't change)
 VAULT_PATH=./vault
@@ -316,18 +331,20 @@ install_mcp_cli() {
         success "mcp-cli installed"
     fi
 
-    # Configure mcp-cli for Todoist if token provided
-    if [[ -n "$TODOIST_API_KEY" ]]; then
-        info "Configuring mcp-cli for Todoist..."
+    # Configure mcp-cli for TickTick if credentials provided
+    if [[ -n "$TICKTICK_ACCESS_TOKEN" ]]; then
+        info "Configuring mcp-cli for TickTick..."
         mkdir -p ~/.config/mcp
         cat > ~/.config/mcp/mcp_servers.json << EOF
 {
   "mcpServers": {
-    "todoist": {
+    "ticktick": {
       "command": "npx",
-      "args": ["-y", "@doist/todoist-ai"],
+      "args": ["-y", "@alexarevalo.ai/mcp-server-ticktick"],
       "env": {
-        "TODOIST_API_KEY": "$TODOIST_API_KEY"
+        "TICKTICK_CLIENT_ID": "$TICKTICK_CLIENT_ID",
+        "TICKTICK_CLIENT_SECRET": "$TICKTICK_CLIENT_SECRET",
+        "TICKTICK_ACCESS_TOKEN": "$TICKTICK_ACCESS_TOKEN"
       }
     }
   }

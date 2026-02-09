@@ -27,7 +27,12 @@ logger = logging.getLogger(__name__)
 async def main() -> None:
     """Generate weekly digest and send to Telegram."""
     settings = get_settings()
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key)
+    processor = ClaudeProcessor(
+        settings.vault_path,
+        settings.ticktick_client_id,
+        settings.ticktick_client_secret,
+        settings.ticktick_access_token,
+    )
     git = VaultGit(settings.vault_path)
 
     logger.info("Starting weekly digest generation...")

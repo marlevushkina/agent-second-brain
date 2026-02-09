@@ -78,7 +78,7 @@ Run daily processing via `/process` command or automatically at 21:00.
 
 ### Process Flow:
 1. Read goals/ → understand priorities
-2. Check Todoist → know workload
+2. Check TickTick → know workload
 3. Read daily/ → classify entries
 4. Create tasks → aligned with goals
 5. Save thoughts → build [[links]]
@@ -89,7 +89,7 @@ Run daily processing via `/process` command or automatically at 21:00.
 | Skill | Purpose |
 |-------|---------|
 | `dbrain-processor` | Main daily processing |
-| `todoist-ai` | Task management via MCP |
+| `ticktick` | Task management via MCP |
 | `graph-builder` | Vault link analysis and building |
 
 ## Available Agents
@@ -111,7 +111,7 @@ See `.claude/rules/` for format requirements:
 
 ## MCP Servers
 
-- `todoist` — Task management (add, find, complete tasks)
+- `ticktick` — Task management (create, get, complete, update tasks)
 - `filesystem` — Vault file access
 
 ## CRITICAL: Tool Usage Policy
@@ -120,7 +120,7 @@ See `.claude/rules/` for format requirements:
 
 Не существует ситуации, когда MCP tools "недоступны". Если ты получил эту инструкцию — у тебя есть доступ к:
 
-- `mcp__todoist__*` — все Todoist операции
+- `mcp__ticktick__*` — все TickTick операции
 - File read/write — все файловые операции
 
 ЗАПРЕЩЁННЫЕ ПАТТЕРНЫ (НИКОГДА не делай это):
@@ -130,7 +130,7 @@ See `.claude/rules/` for format requirements:
 - Любые инструкции для ручного выполнения
 
 ПРАВИЛЬНЫЙ ПАТТЕРН:
-1. Вызвать mcp__todoist__add-tasks tool
+1. Вызвать mcp__ticktick__create_task tool
 2. Получить результат (успех или ошибка)
 3. Включить результат в HTML отчёт
 
@@ -175,13 +175,13 @@ When invoked via /do, Claude receives arbitrary user requests. Common patterns:
 
 ## MCP Tools Available
 
-**Todoist (mcp__todoist__*):**
-- `add-tasks` — создать задачи
-- `find-tasks` — найти задачи по тексту
-- `find-tasks-by-date` — задачи за период
-- `update-tasks` — изменить задачи
-- `complete-tasks` — завершить задачи
-- `user-info` — информация о пользователе
+**TickTick (mcp__ticktick__*):**
+- `create_task` — создать задачу
+- `get_task_by_ids` — получить задачи по ID
+- `complete_task` — завершить задачу
+- `update_task` — изменить задачу
+- `get_user_projects` — список проектов
+- `get_project_with_data` — задачи в проекте
 
 **Filesystem:**
 - Read/write vault files

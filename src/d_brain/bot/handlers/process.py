@@ -26,7 +26,12 @@ async def cmd_process(message: Message) -> None:
     status_msg = await message.answer("⏳ Processing... (may take up to 10 min)")
 
     settings = get_settings()
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key)
+    processor = ClaudeProcessor(
+        settings.vault_path,
+        settings.ticktick_client_id,
+        settings.ticktick_client_secret,
+        settings.ticktick_access_token,
+    )
     git = VaultGit(settings.vault_path)
 
     # Run subprocess in thread to avoid blocking event loop

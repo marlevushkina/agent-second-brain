@@ -1,4 +1,4 @@
-# Todoist Integration
+# TickTick Integration
 
 <!--
 ╔══════════════════════════════════════════════════════════════════╗
@@ -15,14 +15,14 @@
 ## Available MCP Tools
 
 ### Reading Tasks
-- `get-overview` — all projects with hierarchy
-- `find-tasks` — search by text, project, section
-- `find-tasks-by-date` — tasks by date range
+- `get_user_projects` — all projects list
+- `get_project_with_data` — project with its tasks
+- `get_task_by_ids` — get specific tasks by IDs
 
 ### Writing Tasks
-- `add-tasks` — create new tasks
-- `complete-tasks` — mark as done
-- `update-tasks` — modify existing
+- `create_task` — create new task
+- `complete_task` — mark as done
+- `update_task` — modify existing
 
 ---
 
@@ -31,13 +31,11 @@
 ### 1. Check Workload (REQUIRED)
 
 ```
-find-tasks-by-date:
-  startDate: "today"
-  daysCount: 7
-  limit: 50
+get_user_projects → get list of projects
+get_project_with_data → get tasks for each relevant project
 ```
 
-Build workload map:
+Build workload map from task due dates:
 ```
 Mon: 2 tasks
 Tue: 4 tasks  ← overloaded
@@ -50,10 +48,7 @@ Sun: 0 tasks
 
 ### 2. Check Duplicates (REQUIRED)
 
-```
-find-tasks:
-  searchText: "key words from new task"
-```
+Review tasks in relevant project via `get_project_with_data`.
 
 If similar exists → mark as duplicate, don't create.
 
@@ -81,6 +76,16 @@ Based on user's work context (see [ABOUT.md](ABOUT.md)):
 | нужно, надо, не забыть | p3 |
 | (strategic, R&D, long-term) | p4 |
 
+### TickTick Priority Mapping
+
+TickTick uses numeric priorities (0-5, where 5 is highest):
+| Our level | TickTick priority |
+|-----------|------------------|
+| p1 | 5 (highest) |
+| p2 | 3 (high) |
+| p3 | 1 (medium) |
+| p4 | 0 (none/low) |
+
 ### Apply Decision Filters for Priority Boost
 
 If entry matches 2+ filters → boost priority by 1 level:
@@ -93,40 +98,25 @@ If entry matches 2+ filters → boost priority by 1 level:
 
 ## Date Mapping
 
-| Context | dueString |
-|---------|-----------|
-| **Client deadline** | exact date |
+| Context | Due date format |
+|---------|----------------|
+| **Client deadline** | exact date (YYYY-MM-DD) |
 | **Urgent ops** | today / tomorrow |
-| **This week** | friday |
-| **Next week** | next monday |
-| **Strategic/R&D** | in 7 days |
-| **Not specified** | in 3 days |
-
-### Russian → dueString
-
-| Russian | dueString |
-|---------|-----------|
-| сегодня | today |
-| завтра | tomorrow |
-| послезавтра | in 2 days |
-| в понедельник | monday |
-| в пятницу | friday |
-| на этой неделе | friday |
-| на следующей неделе | next monday |
-| через неделю | in 7 days |
-| 15 января | January 15 |
+| **This week** | friday date |
+| **Next week** | next monday date |
+| **Strategic/R&D** | +7 days |
+| **Not specified** | +3 days |
 
 ---
 
 ## Task Creation
 
 ```
-add-tasks:
-  tasks:
-    - content: "Task title"
-      dueString: "friday"  # MANDATORY
-      priority: "p4"       # based on domain
-      projectId: "..."     # if known
+create_task:
+  title: "Task title"
+  projectId: "..."     # from get_user_projects
+  priority: 3          # TickTick priority (0-5)
+  dueDate: "2026-02-15T00:00:00+0000"  # ISO format
 ```
 
 ### Task Title Style
@@ -156,7 +146,7 @@ If target day has 3+ tasks:
 ## Project Detection
 
 <!--
-Настройте под свои проекты в Todoist.
+Настройте под свои проекты в TickTick.
 Замените примеры клиентов и название канала.
 -->
 
@@ -167,7 +157,7 @@ If target day has 3+ tasks:
 | продукт, SaaS, MVP | Product |
 | пост, [@your_channel], контент | Content |
 
-If unclear → use Inbox (no projectId).
+If unclear → use Inbox (default project).
 
 ---
 
@@ -187,7 +177,7 @@ Based on user preferences:
 
 CRITICAL: Никогда не предлагай "добавить вручную".
 
-If `add-tasks` fails:
+If `create_task` fails:
 1. Include EXACT error message in report
 2. Continue with next entry
 3. Don't mark as processed

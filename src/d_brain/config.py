@@ -17,7 +17,9 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str = Field(description="Telegram Bot API token")
     deepgram_api_key: str = Field(description="Deepgram API key for transcription")
-    todoist_api_key: str = Field(default="", description="Todoist API key for tasks")
+    ticktick_client_id: str = Field(default="", description="TickTick OAuth Client ID")
+    ticktick_client_secret: str = Field(default="", description="TickTick OAuth Client Secret")
+    ticktick_access_token: str = Field(default="", description="TickTick OAuth Access Token")
     google_docs_folder_id: str = Field(
         default="",
         description="Google Drive folder ID with Fireflies transcripts",

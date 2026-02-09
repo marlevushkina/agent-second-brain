@@ -1,9 +1,13 @@
 {
   "mcpServers": {
-    "todoist": {
-      "type": "stdio",
+    "ticktick": {
       "command": "npx",
-      "args": ["-y", "@doist/todoist-ai"]
+      "args": ["-y", "@alexarevalo.ai/mcp-server-ticktick"],
+      "env": {
+        "TICKTICK_CLIENT_ID": "${TICKTICK_CLIENT_ID}",
+        "TICKTICK_CLIENT_SECRET": "${TICKTICK_CLIENT_SECRET}",
+        "TICKTICK_ACCESS_TOKEN": "${TICKTICK_ACCESS_TOKEN}"
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 [project]
 name = "agent-second-brain"
 version = "1.0.0"
-description = "Voice-first personal assistant for Telegram with Obsidian and Todoist integration"
+description = "Voice-first personal assistant for Telegram with Obsidian and TickTick integration"
 readme = "README.md"
 authors = [
     { name = "smixs", email = "mixshima@gmail.com" }
@@ -13,7 +13,6 @@ dependencies = [
     "httpx",
     "pydantic>=2.0",
     "pydantic-settings",
-    "todoist-api-python>=3.1.0",
     "google-api-python-client>=2.0",
     "google-auth>=2.0",
 ]

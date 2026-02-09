@@ -26,7 +26,7 @@ Is it actionable?
 └─ YES → Will it take < 2 minutes?
          ├─ YES → Do it now
          └─ NO → Is it a single action?
-                 ├─ YES → Schedule in Todoist
+                 ├─ YES → Schedule in TickTick
                  └─ NO → Create project
 ```
 
@@ -46,7 +46,7 @@ Apply GTD decision tree:
 | Decision | Action |
 |----------|--------|
 | Do Now | Execute immediately, report done |
-| Schedule | Create task in Todoist |
+| Schedule | Create task in TickTick |
 | Project | Create task + note in thoughts/projects/ |
 | Reference | Save to thoughts/{category}/ |
 | Waiting | Create task with "waiting" label |
@@ -60,14 +60,14 @@ Apply GTD decision tree:
 
 **Schedule (single task):**
 ```
-mcp__todoist__add-tasks
-  content: {task}
-  dueString: {date}
-  priority: {p1-p4}
+mcp__ticktick__create_task
+  title: {task}
+  dueDate: {date}
+  priority: {0-5}
 ```
 
 **Project (multi-step):**
-1. Create parent task in Todoist
+1. Create parent task in TickTick
 2. Add subtasks for first steps
 3. Create note in thoughts/projects/
 4. Link task and note
@@ -80,10 +80,10 @@ mcp__todoist__add-tasks
 
 **Waiting:**
 ```
-mcp__todoist__add-tasks
-  content: "Waiting: {description}"
-  labels: ["waiting"]
-  dueString: "in 3 days"  # follow-up
+mcp__ticktick__create_task
+  title: "Waiting: {description}"
+  tags: ["waiting"]
+  dueDate: "+3 days"  # follow-up
 ```
 
 **Trash:**

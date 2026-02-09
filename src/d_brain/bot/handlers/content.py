@@ -53,7 +53,12 @@ async def cmd_content(message: Message) -> None:
     except Exception:
         pass
 
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key)
+    processor = ClaudeProcessor(
+        settings.vault_path,
+        settings.ticktick_client_id,
+        settings.ticktick_client_secret,
+        settings.ticktick_access_token,
+    )
     git = VaultGit(settings.vault_path)
 
     async def run_with_progress() -> dict:

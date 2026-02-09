@@ -17,9 +17,17 @@ DEFAULT_TIMEOUT = 1200  # 20 minutes
 class ClaudeProcessor:
     """Service for triggering Claude Code processing."""
 
-    def __init__(self, vault_path: Path, todoist_api_key: str = "") -> None:
+    def __init__(
+        self,
+        vault_path: Path,
+        ticktick_client_id: str = "",
+        ticktick_client_secret: str = "",
+        ticktick_access_token: str = "",
+    ) -> None:
         self.vault_path = Path(vault_path)
-        self.todoist_api_key = todoist_api_key
+        self.ticktick_client_id = ticktick_client_id
+        self.ticktick_client_secret = ticktick_client_secret
+        self.ticktick_access_token = ticktick_access_token
         self._mcp_config_path = (self.vault_path.parent / "mcp-config.json").resolve()
 
     def _load_skill_content(self) -> str:
@@ -33,9 +41,9 @@ class ClaudeProcessor:
             return skill_path.read_text()
         return ""
 
-    def _load_todoist_reference(self) -> str:
-        """Load Todoist reference for inclusion in prompt."""
-        ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/todoist.md"
+    def _load_ticktick_reference(self) -> str:
+        """Load TickTick reference for inclusion in prompt."""
+        ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/ticktick.md"
         if ref_path.exists():
             return ref_path.read_text()
         return ""
@@ -154,12 +162,12 @@ week: {year}-W{week:02d}
 {skill_content}
 === END SKILL ===
 
-ПЕРВЫМ ДЕЛОМ: вызови mcp__todoist__user-info чтобы убедиться что MCP работает.
+ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__todoist__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
-- Для задач: вызови mcp__todoist__add-tasks tool
+- Для задач: вызови mcp__ticktick__create_task tool
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
 CRITICAL OUTPUT FORMAT:
@@ -170,10 +178,14 @@ CRITICAL OUTPUT FORMAT:
 - If entries already processed, return status report in same HTML format"""
 
         try:
-            # Pass TODOIST_API_KEY to Claude subprocess
+            # Pass TickTick credentials to Claude subprocess
             env = os.environ.copy()
-            if self.todoist_api_key:
-                env["TODOIST_API_KEY"] = self.todoist_api_key
+            if self.ticktick_client_id:
+                env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
+            if self.ticktick_client_secret:
+                env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
+            if self.ticktick_access_token:
+                env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
 
             result = subprocess.run(
                 [
@@ -239,7 +251,7 @@ CRITICAL OUTPUT FORMAT:
         today = date.today()
 
         # Load context
-        todoist_ref = self._load_todoist_reference()
+        ticktick_ref = self._load_ticktick_reference()
         session_context = self._get_session_context(user_id)
 
         prompt = f"""Ты - персональный ассистент d-brain.
@@ -248,14 +260,14 @@ CONTEXT:
 - Текущая дата: {today}
 - Vault path: {self.vault_path}
 
-{session_context}=== TODOIST REFERENCE ===
-{todoist_ref}
+{session_context}=== TICKTICK REFERENCE ===
+{ticktick_ref}
 === END REFERENCE ===
 
-ПЕРВЫМ ДЕЛОМ: вызови mcp__todoist__user-info чтобы убедиться что MCP работает.
+ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__todoist__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
@@ -271,13 +283,17 @@ CRITICAL OUTPUT FORMAT:
 
 EXECUTION:
 1. Analyze the request
-2. Call MCP tools directly (mcp__todoist__*, read/write files)
+2. Call MCP tools directly (mcp__ticktick__*, read/write files)
 3. Return HTML status report with results"""
 
         try:
             env = os.environ.copy()
-            if self.todoist_api_key:
-                env["TODOIST_API_KEY"] = self.todoist_api_key
+            if self.ticktick_client_id:
+                env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
+            if self.ticktick_client_secret:
+                env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
+            if self.ticktick_access_token:
+                env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
 
             result = subprocess.run(
                 [
@@ -329,12 +345,12 @@ EXECUTION:
 
         prompt = f"""Сегодня {today}. Сгенерируй недельный дайджест.
 
-ПЕРВЫМ ДЕЛОМ: вызови mcp__todoist__user-info чтобы убедиться что MCP работает.
+ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__todoist__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
-- Для выполненных задач: вызови mcp__todoist__find-completed-tasks tool
+- Для задач в проекте: вызови mcp__ticktick__get_project_with_data tool
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
 WORKFLOW:
@@ -352,8 +368,12 @@ CRITICAL OUTPUT FORMAT:
 
         try:
             env = os.environ.copy()
-            if self.todoist_api_key:
-                env["TODOIST_API_KEY"] = self.todoist_api_key
+            if self.ticktick_client_id:
+                env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
+            if self.ticktick_client_secret:
+                env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
+            if self.ticktick_access_token:
+                env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
 
             result = subprocess.run(
                 [
