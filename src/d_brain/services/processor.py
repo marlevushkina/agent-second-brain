@@ -421,6 +421,38 @@ CRITICAL OUTPUT FORMAT:
             logger.exception("Unexpected error during weekly digest")
             return {"error": str(e), "processed_entries": 0}
 
+    def _summarize_meeting(self, name: str, text: str) -> str:
+        """Summarize a long meeting transcript via Claude.
+
+        Returns a concise summary with key insights, decisions, and
+        interesting thoughts — so nothing important is lost.
+        """
+        prompt = (
+            "Ты суммаризатор встреч. Извлеки из транскрипта ВСЕ ключевые мысли, "
+            "решения, инсайты, интересные идеи и цитаты. Ничего важного не пропускай.\n\n"
+            "Формат ответа — краткий конспект (bullet points), до 2000 слов. "
+            "Пиши на том же языке, что и транскрипт.\n\n"
+            f"=== TRANSCRIPT: {name} ===\n{text}"
+        )
+        try:
+            result = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions"],
+                input=prompt,
+                cwd=self.vault_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                summary = result.stdout.strip()
+                logger.info("Summarized meeting %s: %d → %d chars", name, len(text), len(summary))
+                return f"[SUMMARY]\n{summary}"
+        except Exception as e:
+            logger.warning("Failed to summarize meeting %s: %s", name, e)
+        # Fallback: return original text (stdin handles large prompts)
+        return text
+
     def _collect_raw_material(self, days: int = 7) -> str:
         """Collect raw material from vault for content seed generation.
 
@@ -447,8 +479,7 @@ CRITICAL OUTPUT FORMAT:
                     if content.strip():
                         parts.append(f"=== DAILY {day.isoformat()} ===\n{content}")
 
-        # Collect meeting transcripts (truncate to avoid huge prompts)
-        max_meeting_chars = 5000
+        # Collect meeting transcripts — summarize large ones first
         meetings_dir = self.vault_path / "content" / "meetings"
         if meetings_dir.exists():
             cutoff = today - timedelta(days=days)
@@ -459,8 +490,8 @@ CRITICAL OUTPUT FORMAT:
                     if file_date >= cutoff:
                         content = md_file.read_text()
                         if content.strip():
-                            if len(content) > max_meeting_chars:
-                                content = content[:max_meeting_chars] + "\n...(обрезано)"
+                            if len(content) > 5000:
+                                content = self._summarize_meeting(md_file.stem, content)
                             parts.append(
                                 f"=== MEETING {md_file.stem} ===\n{content}"
                             )
