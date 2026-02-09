@@ -21,7 +21,7 @@ Check AFTER each `## HH:MM` header for the marker.
 | на этой неделе | friday |
 | в четверг | thursday |
 | 15 января | January 15 |
-| NOT SPECIFIED | in 3 days |
+| NOT SPECIFIED | tomorrow |
 
 ## Rule 3: Check Duplicates
 

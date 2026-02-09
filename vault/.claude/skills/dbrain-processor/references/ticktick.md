@@ -105,7 +105,7 @@ If entry matches 2+ filters → boost priority by 1 level:
 | **This week** | friday date |
 | **Next week** | next monday date |
 | **Strategic/R&D** | +7 days |
-| **Not specified** | +3 days |
+| **Not specified** | tomorrow |
 
 ---
 
