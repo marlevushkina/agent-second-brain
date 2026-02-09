@@ -16,5 +16,6 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
     builder.button(text="❓ Помощь")
     # Third row: content
     builder.button(text="🌱 Контент")
-    builder.adjust(3, 2, 1)  # 3 in first row, 2 in second, 1 in third
+    builder.button(text="📋 План")
+    builder.adjust(3, 2, 2)  # 3 in first row, 2 in second, 2 in third
     return builder.as_markup(resize_keyboard=True, is_persistent=True)

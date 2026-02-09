@@ -51,6 +51,14 @@ async def btn_content(message: Message) -> None:
     await cmd_content(message)
 
 
+@router.message(F.text == "📋 План")
+async def btn_plan(message: Message) -> None:
+    """Handle Plan button."""
+    from d_brain.bot.handlers.content_plan import cmd_plan
+
+    await cmd_plan(message)
+
+
 @router.message(F.text == "❓ Помощь")
 async def btn_help(message: Message) -> None:
     """Handle Help button."""

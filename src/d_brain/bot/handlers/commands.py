@@ -31,6 +31,7 @@ async def cmd_start(message: Message) -> None:
         "/do - выполнить произвольный запрос\n"
         "/weekly - недельный дайджест\n"
         "/content - генерация content seeds\n"
+        "/plan - контент-план на неделю\n"
         "/help - справка",
         reply_markup=get_main_keyboard(),
     )
@@ -52,7 +53,8 @@ async def cmd_help(message: Message) -> None:
         "/process - обработать записи\n"
         "/do - выполнить произвольный запрос\n"
         "/weekly - недельный дайджест\n"
-        "/content - генерация content seeds\n\n"
+        "/content - генерация content seeds\n"
+        "/plan - контент-план на неделю\n\n"
         "<i>Пример: /do перенеси просроченные задачи на понедельник</i>"
     )
 
