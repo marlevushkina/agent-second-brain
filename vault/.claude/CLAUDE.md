@@ -89,6 +89,8 @@ Run daily processing via `/process` command or automatically at 21:00.
 | Skill | Purpose |
 |-------|---------|
 | `dbrain-processor` | Main daily processing |
+| `content-seeds` | Content seed generation with humanizer |
+| `content-planner` | Weekly content plan (TG + LinkedIn) |
 | `ticktick` | Task management via MCP |
 | `graph-builder` | Vault link analysis and building |
 
@@ -150,6 +152,8 @@ Reports use Telegram HTML:
 | `/process` | Run daily processing |
 | `/do` | Execute arbitrary request |
 | `/weekly` | Generate weekly digest |
+| `/content` | Generate content seeds |
+| `/plan` | Weekly content plan (TG + LinkedIn) |
 | `/align` | Check goal alignment |
 | `/organize` | Organize vault |
 | `/graph` | Analyze vault links |

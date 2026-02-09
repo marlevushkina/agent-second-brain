@@ -508,6 +508,27 @@ week: {year}-W{week:02d}
         logger.info("Content seeds saved to %s", seeds_path)
         return seeds_path
 
+    def _load_content_seeds_skill(self) -> str:
+        """Load content-seeds skill content."""
+        skill_path = self.vault_path / ".claude/skills/content-seeds/SKILL.md"
+        if skill_path.exists():
+            return skill_path.read_text()
+        return ""
+
+    def _load_humanizer_reference(self) -> str:
+        """Load humanizer reference for content quality."""
+        ref_path = self.vault_path / ".claude/skills/content-seeds/references/humanizer.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
+    def _load_tone_examples(self) -> str:
+        """Load tone of voice examples from real channel posts."""
+        ref_path = self.vault_path / ".claude/skills/content-seeds/references/tone-examples.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
     def generate_content_seeds(self) -> dict[str, Any]:
         """Generate content seeds from weekly raw material.
 
@@ -516,11 +537,10 @@ week: {year}-W{week:02d}
         """
         today = date.today()
 
-        # Load skill
-        skill_path = self.vault_path / ".claude/skills/content-seeds/SKILL.md"
-        skill_content = ""
-        if skill_path.exists():
-            skill_content = skill_path.read_text()
+        # Load skill and references
+        skill_content = self._load_content_seeds_skill()
+        humanizer_content = self._load_humanizer_reference()
+        tone_examples = self._load_tone_examples()
 
         # Collect raw material in Python (more reliable than asking Claude to read files)
         raw_material = self._collect_raw_material(days=7)
@@ -530,12 +550,19 @@ week: {year}-W{week:02d}
                 "processed_entries": 0,
             }
 
+        # Build references section
+        references = ""
+        if humanizer_content:
+            references += f"\n=== HUMANIZER REFERENCE ===\n{humanizer_content}\n=== END HUMANIZER ===\n"
+        if tone_examples:
+            references += f"\n=== TONE OF VOICE EXAMPLES ===\n{tone_examples}\n=== END TONE EXAMPLES ===\n"
+
         prompt = f"""Сегодня {today}. Сгенерируй content seeds из сырого материала.
 
 === SKILL INSTRUCTIONS ===
 {skill_content}
 === END SKILL ===
-
+{references}
 === RAW MATERIAL (last 7 days) ===
 {raw_material}
 === END RAW MATERIAL ===
@@ -544,7 +571,12 @@ CRITICAL OUTPUT FORMAT:
 - Return ONLY raw HTML for Telegram (parse_mode=HTML)
 - NO markdown: no **, no ##, no ```, no tables
 - Allowed tags: <b>, <i>, <code>, <s>, <u>
-- Follow the output format from SKILL INSTRUCTIONS exactly"""
+- Follow the output format from SKILL INSTRUCTIONS exactly
+
+CRITICAL STYLE RULE:
+- Применяй ВСЕ правила из HUMANIZER REFERENCE
+- Каждый hook проверяй на AI-паттерны перед выдачей
+- Пиши как живой человек, не как ChatGPT"""
 
         try:
             env = os.environ.copy()
@@ -593,4 +625,158 @@ CRITICAL OUTPUT FORMAT:
             return {"error": "Claude CLI not installed", "processed_entries": 0}
         except Exception as e:
             logger.exception("Unexpected error during content seeds generation")
+            return {"error": str(e), "processed_entries": 0}
+
+    def _load_latest_seeds(self) -> str:
+        """Load the most recent content seeds file."""
+        seeds_dir = self.vault_path / "content" / "seeds"
+        if not seeds_dir.exists():
+            return ""
+        seed_files = sorted(seeds_dir.glob("*.md"), reverse=True)
+        if seed_files:
+            return seed_files[0].read_text()
+        return ""
+
+    def _load_content_planner_skill(self) -> str:
+        """Load content-planner skill content."""
+        skill_path = self.vault_path / ".claude/skills/content-planner/SKILL.md"
+        if skill_path.exists():
+            return skill_path.read_text()
+        return ""
+
+    def _load_monthly_goals(self) -> str:
+        """Load current monthly goals for content alignment."""
+        goals_path = self.vault_path / "goals" / "2-monthly.md"
+        if goals_path.exists():
+            return goals_path.read_text()
+        return ""
+
+    def _save_content_plan(self, html: str, plan_date: date) -> Path:
+        """Save content plan to vault/content/plans/YYYY-WXX-plan.md."""
+        year, week, _ = plan_date.isocalendar()
+        filename = f"{year}-W{week:02d}-plan.md"
+        plans_dir = self.vault_path / "content" / "plans"
+        plans_dir.mkdir(parents=True, exist_ok=True)
+        plan_path = plans_dir / filename
+
+        content = self._html_to_markdown(html)
+        frontmatter = f"""---
+date: {plan_date.isoformat()}
+type: content-plan
+week: {year}-W{week:02d}
+---
+
+"""
+        plan_path.write_text(frontmatter + content)
+        logger.info("Content plan saved to %s", plan_path)
+        return plan_path
+
+    def generate_content_plan(self, channel_posts: str = "") -> dict[str, Any]:
+        """Generate weekly content plan from seeds and channel history.
+
+        Args:
+            channel_posts: Formatted recent channel posts for context.
+
+        Returns:
+            Content plan report as dict.
+        """
+        today = date.today()
+
+        # Load skill and context
+        skill_content = self._load_content_planner_skill()
+        humanizer_content = self._load_humanizer_reference()
+        seeds_content = self._load_latest_seeds()
+        monthly_goals = self._load_monthly_goals()
+
+        if not seeds_content:
+            return {
+                "error": "Нет content seeds. Сначала запусти /content",
+                "processed_entries": 0,
+            }
+
+        # Build context sections
+        context_parts = []
+        if channel_posts:
+            context_parts.append(
+                f"=== RECENT CHANNEL POSTS ===\n{channel_posts}\n=== END CHANNEL POSTS ==="
+            )
+        if monthly_goals:
+            context_parts.append(
+                f"=== MONTHLY GOALS ===\n{monthly_goals}\n=== END MONTHLY GOALS ==="
+            )
+        extra_context = "\n\n".join(context_parts)
+
+        prompt = f"""Сегодня {today}. Составь контент-план на неделю.
+
+=== SKILL INSTRUCTIONS ===
+{skill_content}
+=== END SKILL ===
+
+=== HUMANIZER REFERENCE ===
+{humanizer_content}
+=== END HUMANIZER ===
+
+=== CONTENT SEEDS ===
+{seeds_content}
+=== END CONTENT SEEDS ===
+
+{extra_context}
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY raw HTML for Telegram (parse_mode=HTML)
+- NO markdown: no **, no ##, no ```, no tables
+- Allowed tags: <b>, <i>, <code>, <s>, <u>
+- Follow the output format from SKILL INSTRUCTIONS exactly
+
+CRITICAL STYLE RULE:
+- Все hooks пиши живым языком по правилам HUMANIZER REFERENCE
+- Никакого AI-стиля, канцелярита, шаблонных переходов"""
+
+        try:
+            env = os.environ.copy()
+
+            result = subprocess.run(
+                [
+                    "claude",
+                    "--print",
+                    "--dangerously-skip-permissions",
+                    "-p",
+                    prompt,
+                ],
+                cwd=self.vault_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_TIMEOUT,
+                check=False,
+                env=env,
+            )
+
+            if result.returncode != 0:
+                logger.error("Content plan generation failed: %s", result.stderr)
+                return {
+                    "error": result.stderr or "Content plan generation failed",
+                    "processed_entries": 0,
+                }
+
+            output = result.stdout.strip()
+
+            # Save to vault
+            try:
+                self._save_content_plan(output, today)
+            except Exception as e:
+                logger.warning("Failed to save content plan: %s", e)
+
+            return {
+                "report": output,
+                "processed_entries": 1,
+            }
+
+        except subprocess.TimeoutExpired:
+            logger.error("Content plan generation timed out")
+            return {"error": "Content plan generation timed out", "processed_entries": 0}
+        except FileNotFoundError:
+            logger.error("Claude CLI not found")
+            return {"error": "Claude CLI not installed", "processed_entries": 0}
+        except Exception as e:
+            logger.exception("Unexpected error during content plan generation")
             return {"error": str(e), "processed_entries": 0}
