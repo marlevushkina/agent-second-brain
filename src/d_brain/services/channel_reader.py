@@ -28,6 +28,12 @@ class ChannelReader:
         self.vault_path = Path(vault_path)
         self._archive_dir = self.vault_path / "content" / "channel-archive"
 
+    async def _create_client(self) -> TelegramClient:
+        """Create and authenticate a Telethon client with bot token."""
+        client = TelegramClient(StringSession(), self.api_id, self.api_hash)
+        await client.start(bot_token=self.bot_token)
+        return client
+
     async def get_recent_posts(self, limit: int = 50) -> list[dict]:
         """Fetch recent posts from the channel.
 
@@ -38,12 +44,9 @@ class ChannelReader:
             List of post dicts with keys: id, date, text, views, forwards.
         """
         posts: list[dict] = []
+        client = await self._create_client()
 
-        async with TelegramClient(
-            StringSession(), self.api_id, self.api_hash
-        ) as client:
-            await client.start(bot_token=self.bot_token)
-
+        try:
             entity = await client.get_entity(self.channel)
 
             async for message in client.iter_messages(entity, limit=limit):
@@ -57,6 +60,8 @@ class ChannelReader:
                     "views": message.views or 0,
                     "forwards": message.forwards or 0,
                 })
+        finally:
+            await client.disconnect()
 
         logger.info("Fetched %d posts from @%s", len(posts), self.channel)
         return posts
@@ -74,12 +79,9 @@ class ChannelReader:
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         posts: list[dict] = []
+        client = await self._create_client()
 
-        async with TelegramClient(
-            StringSession(), self.api_id, self.api_hash
-        ) as client:
-            await client.start(bot_token=self.bot_token)
-
+        try:
             entity = await client.get_entity(self.channel)
 
             async for message in client.iter_messages(
@@ -95,6 +97,8 @@ class ChannelReader:
                     "views": message.views or 0,
                     "forwards": message.forwards or 0,
                 })
+        finally:
+            await client.disconnect()
 
         logger.info(
             "Fetched %d posts from @%s (last %d days)",
