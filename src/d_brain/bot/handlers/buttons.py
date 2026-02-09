@@ -43,6 +43,14 @@ async def btn_do(message: Message, state: FSMContext) -> None:
     )
 
 
+@router.message(F.text == "🌱 Контент")
+async def btn_content(message: Message) -> None:
+    """Handle Content button."""
+    from d_brain.bot.handlers.content import cmd_content
+
+    await cmd_content(message)
+
+
 @router.message(F.text == "❓ Помощь")
 async def btn_help(message: Message) -> None:
     """Handle Help button."""

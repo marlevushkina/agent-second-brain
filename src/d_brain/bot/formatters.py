@@ -190,6 +190,57 @@ def format_error(error: str) -> str:
     return f"❌ <b>Ошибка:</b> {html.escape(error)}"
 
 
+def split_html_report(text: str, max_length: int = 4000) -> list[str]:
+    """Split long HTML report into parts by Seed boundaries.
+
+    Splits on '<b>Seed #' markers to keep each seed intact.
+    Falls back to truncate_html if no seed markers found.
+
+    Args:
+        text: Full HTML report text.
+        max_length: Max length per part.
+
+    Returns:
+        List of HTML parts, each within max_length.
+    """
+    if len(text) <= max_length:
+        return [text]
+
+    # Try to split by seed boundaries
+    import re
+    parts: list[str] = []
+    # Split before each <b>Seed # marker (keep the marker with the next chunk)
+    chunks = re.split(r"(?=<b>Seed #)", text)
+
+    current = ""
+    for chunk in chunks:
+        if not chunk:
+            continue
+        if len(current) + len(chunk) <= max_length:
+            current += chunk
+        else:
+            if current:
+                parts.append(current.strip())
+            current = chunk
+
+    if current:
+        parts.append(current.strip())
+
+    # If splitting didn't help (no seed markers), fall back to truncation
+    if not parts:
+        return [truncate_html(text, max_length)]
+
+    # Ensure each part is within limit
+    result: list[str] = []
+    for part in parts:
+        if len(part) <= max_length:
+            result.append(part)
+        else:
+            result.append(truncate_html(part, max_length))
+
+    return result
+
+
 def format_empty_daily() -> str:
     """Format message for empty daily file.
 

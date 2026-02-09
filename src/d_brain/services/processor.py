@@ -3,7 +3,7 @@
 import logging
 import os
 import subprocess
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -402,4 +402,175 @@ CRITICAL OUTPUT FORMAT:
             return {"error": "Claude CLI not installed", "processed_entries": 0}
         except Exception as e:
             logger.exception("Unexpected error during weekly digest")
+            return {"error": str(e), "processed_entries": 0}
+
+    def _collect_raw_material(self, days: int = 7) -> str:
+        """Collect raw material from vault for content seed generation.
+
+        Gathers daily files, meeting transcripts, and thoughts
+        from the last N days.
+
+        Args:
+            days: Number of days to look back.
+
+        Returns:
+            Combined text of all raw material.
+        """
+        today = date.today()
+        parts: list[str] = []
+
+        # Collect daily files
+        daily_dir = self.vault_path / "daily"
+        if daily_dir.exists():
+            for i in range(days):
+                day = today - timedelta(days=i)
+                daily_file = daily_dir / f"{day.isoformat()}.md"
+                if daily_file.exists():
+                    content = daily_file.read_text()
+                    if content.strip():
+                        parts.append(f"=== DAILY {day.isoformat()} ===\n{content}")
+
+        # Collect meeting transcripts
+        meetings_dir = self.vault_path / "content" / "meetings"
+        if meetings_dir.exists():
+            cutoff = today - timedelta(days=days)
+            for md_file in sorted(meetings_dir.glob("*.md"), reverse=True):
+                # Filename starts with YYYY-MM-DD
+                try:
+                    file_date = date.fromisoformat(md_file.name[:10])
+                    if file_date >= cutoff:
+                        content = md_file.read_text()
+                        if content.strip():
+                            parts.append(
+                                f"=== MEETING {md_file.stem} ===\n{content}"
+                            )
+                except ValueError:
+                    continue
+
+        # Collect thoughts
+        thoughts_dir = self.vault_path / "thoughts"
+        if thoughts_dir.exists():
+            cutoff = today - timedelta(days=days)
+            for md_file in sorted(thoughts_dir.glob("*.md"), reverse=True):
+                try:
+                    file_date = date.fromisoformat(md_file.name[:10])
+                    if file_date >= cutoff:
+                        content = md_file.read_text()
+                        if content.strip():
+                            parts.append(
+                                f"=== THOUGHT {md_file.stem} ===\n{content}"
+                            )
+                except ValueError:
+                    continue
+
+        if not parts:
+            return ""
+
+        return "\n\n".join(parts)
+
+    def _save_content_seeds(self, html: str, seeds_date: date) -> Path:
+        """Save content seeds to vault/content/seeds/YYYY-WXX-seeds.md."""
+        year, week, _ = seeds_date.isocalendar()
+        filename = f"{year}-W{week:02d}-seeds.md"
+        seeds_dir = self.vault_path / "content" / "seeds"
+        seeds_dir.mkdir(parents=True, exist_ok=True)
+        seeds_path = seeds_dir / filename
+
+        content = self._html_to_markdown(html)
+        frontmatter = f"""---
+date: {seeds_date.isoformat()}
+type: content-seeds
+week: {year}-W{week:02d}
+---
+
+"""
+        seeds_path.write_text(frontmatter + content)
+        logger.info("Content seeds saved to %s", seeds_path)
+        return seeds_path
+
+    def generate_content_seeds(self) -> dict[str, Any]:
+        """Generate content seeds from weekly raw material.
+
+        Returns:
+            Content seeds report as dict.
+        """
+        today = date.today()
+
+        # Load skill
+        skill_path = self.vault_path / ".claude/skills/content-seeds/SKILL.md"
+        skill_content = ""
+        if skill_path.exists():
+            skill_content = skill_path.read_text()
+
+        # Collect raw material in Python (more reliable than asking Claude to read files)
+        raw_material = self._collect_raw_material(days=7)
+        if not raw_material:
+            return {
+                "error": "Нет записей за последние 7 дней для генерации seeds",
+                "processed_entries": 0,
+            }
+
+        prompt = f"""Сегодня {today}. Сгенерируй content seeds из сырого материала.
+
+=== SKILL INSTRUCTIONS ===
+{skill_content}
+=== END SKILL ===
+
+=== RAW MATERIAL (last 7 days) ===
+{raw_material}
+=== END RAW MATERIAL ===
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY raw HTML for Telegram (parse_mode=HTML)
+- NO markdown: no **, no ##, no ```, no tables
+- Allowed tags: <b>, <i>, <code>, <s>, <u>
+- Follow the output format from SKILL INSTRUCTIONS exactly"""
+
+        try:
+            env = os.environ.copy()
+
+            result = subprocess.run(
+                [
+                    "claude",
+                    "--print",
+                    "--dangerously-skip-permissions",
+                    "-p",
+                    prompt,
+                ],
+                cwd=self.vault_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_TIMEOUT,
+                check=False,
+                env=env,
+            )
+
+            if result.returncode != 0:
+                logger.error("Content seeds generation failed: %s", result.stderr)
+                return {
+                    "error": result.stderr or "Content seeds generation failed",
+                    "processed_entries": 0,
+                }
+
+            output = result.stdout.strip()
+
+            # Save to vault
+            try:
+                self._save_content_seeds(output, today)
+            except Exception as e:
+                logger.warning("Failed to save content seeds: %s", e)
+
+            return {
+                "report": output,
+                "processed_entries": 1,
+            }
+
+        except subprocess.TimeoutExpired:
+            logger.error("Content seeds generation timed out")
+            return {"error": "Content seeds generation timed out", "processed_entries": 0}
+        except FileNotFoundError:
+            logger.error("Claude CLI not found")
+            return {"error": "Claude CLI not installed", "processed_entries": 0}
+        except Exception as e:
+            logger.exception("Unexpected error during content seeds generation")
             return {"error": str(e), "processed_entries": 0}
