@@ -95,6 +95,24 @@ class ClaudeProcessor:
 
         return text
 
+    def _markdown_to_html(self, md: str) -> str:
+        """Convert Obsidian Markdown back to Telegram HTML."""
+        import re
+
+        text = md
+        # **text** → <b>text</b>
+        text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+        # *text* → <i>text</i> (but not inside already-converted bold)
+        text = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", r"<i>\1</i>", text)
+        # `text` → <code>text</code>
+        text = re.sub(r"`([^`]+?)`", r"<code>\1</code>", text)
+        # ~~text~~ → <s>text</s>
+        text = re.sub(r"~~(.+?)~~", r"<s>\1</s>", text)
+        # [text](url) → <a href="url">text</a>
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+
+        return text
+
     def _save_weekly_summary(self, report_html: str, week_date: date) -> Path:
         """Save weekly summary to vault/summaries/YYYY-WXX-summary.md."""
         # Calculate ISO week number
@@ -730,16 +748,19 @@ week: {year}-W{week:02d}
         logger.info("Content plan saved to %s", plan_path)
         return plan_path
 
-    def generate_content_plan(self, channel_posts: str = "") -> dict[str, Any]:
+    def generate_content_plan(
+        self, channel_posts: str = "", target_date: date | None = None,
+    ) -> dict[str, Any]:
         """Generate weekly content plan from seeds and channel history.
 
         Args:
             channel_posts: Formatted recent channel posts for context.
+            target_date: Date to generate plan for (default: today).
 
         Returns:
             Content plan report as dict.
         """
-        today = date.today()
+        today = target_date or date.today()
 
         # Load skill and context
         skill_content = self._load_content_planner_skill()
@@ -837,4 +858,325 @@ CRITICAL STYLE RULE:
             return {"error": "Claude CLI not installed", "processed_entries": 0}
         except Exception as e:
             logger.exception("Unexpected error during content plan generation")
+            return {"error": str(e), "processed_entries": 0}
+
+    # --- Content viewing & plan management methods ---
+
+    def _extract_seed_titles(self) -> list[dict]:
+        """Extract seed titles from all seed files.
+
+        Returns:
+            List of dicts: {"week", "num", "title", "full_text"}.
+        """
+        import re
+
+        seeds_dir = self.vault_path / "content" / "seeds"
+        if not seeds_dir.exists():
+            return []
+
+        seed_files = sorted(seeds_dir.glob("*.md"), reverse=True)[:8]
+        results: list[dict] = []
+
+        for f in seed_files:
+            if f.name == ".gitkeep":
+                continue
+            content = f.read_text()
+            # Extract week from frontmatter or filename
+            week = ""
+            week_match = re.search(r"week:\s*(\S+)", content)
+            if week_match:
+                week = week_match.group(1)
+            else:
+                # Try filename: 2026-W07-seeds.md
+                fname_match = re.match(r"(\d{4}-W\d{2})", f.name)
+                if fname_match:
+                    week = fname_match.group(1)
+
+            # Strip frontmatter for content parsing
+            body = content
+            if body.startswith("---"):
+                end = body.find("---", 3)
+                if end != -1:
+                    body = body[end + 3:].strip()
+
+            # Find all seeds: "Seed #N: title" or "**Seed #N: title**"
+            seed_pattern = re.compile(
+                r"\*{0,2}Seed\s*#(\d+)[:\s]+(.+?)\*{0,2}\s*$", re.MULTILINE,
+            )
+            # Split body into seed blocks
+            seed_starts = list(seed_pattern.finditer(body))
+            for i, m in enumerate(seed_starts):
+                num = int(m.group(1))
+                title = m.group(2).strip().rstrip("*")
+                # Full text = from this match to next seed or end
+                start = m.start()
+                end_pos = seed_starts[i + 1].start() if i + 1 < len(seed_starts) else len(body)
+                full_text = body[start:end_pos].strip()
+                results.append({
+                    "week": week,
+                    "num": num,
+                    "title": title,
+                    "full_text": full_text,
+                })
+
+        return results
+
+    def get_current_plan(self, week_offset: int = 0) -> dict[str, Any]:
+        """Read plan file for current (or offset) week.
+
+        Args:
+            week_offset: 0 = current week, 1 = next week.
+
+        Returns:
+            Dict with 'plan' content, 'week' id, 'path', or 'error'.
+        """
+        target = date.today() + timedelta(weeks=week_offset)
+        year, week, _ = target.isocalendar()
+        week_id = f"{year}-W{week:02d}"
+        filename = f"{week_id}-plan.md"
+        plan_path = self.vault_path / "content" / "plans" / filename
+
+        if not plan_path.exists():
+            return {"error": f"План на {week_id} не найден"}
+
+        content = plan_path.read_text()
+        # Strip frontmatter
+        if content.startswith("---"):
+            end = content.find("---", 3)
+            if end != -1:
+                content = content[end + 3:].strip()
+
+        return {"plan": content, "week": week_id, "path": str(plan_path)}
+
+    def plan_exists_for_week(self, week_offset: int = 0) -> bool:
+        """Check if a plan file exists for the given week."""
+        target = date.today() + timedelta(weeks=week_offset)
+        year, week, _ = target.isocalendar()
+        filename = f"{year}-W{week:02d}-plan.md"
+        return (self.vault_path / "content" / "plans" / filename).exists()
+
+    def list_unpublished_seeds(self, channel_posts: str) -> dict[str, Any]:
+        """List all seeds, marking which have been published.
+
+        Uses a lightweight Claude call to match seed titles with channel posts.
+
+        Args:
+            channel_posts: Formatted recent channel posts text.
+
+        Returns:
+            Dict with 'seeds' list and 'published_indices'.
+        """
+        all_seeds = self._extract_seed_titles()
+        if not all_seeds:
+            return {"error": "Нет seeds. Запусти /content для генерации."}
+
+        # Build compact title list for Claude
+        titles_text = "\n".join(
+            f"{i + 1}. [{s['week']}] Seed #{s['num']}: {s['title']}"
+            for i, s in enumerate(all_seeds)
+        )
+
+        prompt = f"""Сравни список content seeds с опубликованными постами канала.
+Верни ТОЛЬКО номера (из списка ниже) seeds, которые УЖЕ БЫЛИ опубликованы как посты.
+Если ни один не опубликован, верни "none".
+Сравнивай по смыслу и теме, не по точному совпадению текста.
+
+=== СПИСОК SEEDS ===
+{titles_text}
+=== END SEEDS ===
+
+=== ПОСТЫ КАНАЛА ===
+{channel_posts}
+=== END POSTS ===
+
+Верни ТОЛЬКО номера через запятую, ничего больше. Пример: 1,3,7"""
+
+        try:
+            result = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions"],
+                input=prompt,
+                cwd=self.vault_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+
+            published_indices: set[int] = set()
+            if result.returncode == 0 and result.stdout.strip().lower() != "none":
+                import re
+                numbers = re.findall(r"\d+", result.stdout.strip())
+                published_indices = {int(n) for n in numbers if 1 <= int(n) <= len(all_seeds)}
+
+            # Build result: only unpublished
+            unpublished = []
+            for i, s in enumerate(all_seeds):
+                s["published"] = (i + 1) in published_indices
+                if not s["published"]:
+                    unpublished.append(s)
+
+            return {
+                "seeds": all_seeds,
+                "unpublished": unpublished,
+                "total": len(all_seeds),
+                "published_count": len(published_indices),
+            }
+
+        except Exception as e:
+            logger.warning("Failed to match seeds with channel: %s", e)
+            # Fallback: return all seeds as unpublished
+            return {
+                "seeds": all_seeds,
+                "unpublished": all_seeds,
+                "total": len(all_seeds),
+                "published_count": 0,
+            }
+
+    def reconcile_plan_with_channel(self, channel_posts: str) -> dict[str, Any]:
+        """Compare plan with published posts, suggest adjustments.
+
+        Args:
+            channel_posts: Formatted recent channel posts text.
+
+        Returns:
+            Updated plan report as dict.
+        """
+        plan_data = self.get_current_plan()
+        if "error" in plan_data:
+            return plan_data
+
+        humanizer = self._load_humanizer_reference()
+
+        prompt = f"""Сравни контент-план с опубликованными постами канала.
+
+=== КОНТЕНТ-ПЛАН ({plan_data['week']}) ===
+{plan_data['plan']}
+=== END PLAN ===
+
+=== ПОСТЫ КАНАЛА ===
+{channel_posts}
+=== END POSTS ===
+
+=== HUMANIZER ===
+{humanizer}
+=== END HUMANIZER ===
+
+ЗАДАЧА:
+1. Определи какие посты из плана уже опубликованы - отметь их ✅
+2. Для неопубликованных - оставь как есть или скорректируй если нужно
+3. Верни полный обновлённый план
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY raw HTML for Telegram (parse_mode=HTML)
+- NO markdown: no **, no ##, no ```, no tables
+- Allowed tags: <b>, <i>, <code>, <s>, <u>
+- Все hooks пиши живым языком по правилам HUMANIZER"""
+
+        try:
+            result = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions"],
+                input=prompt,
+                cwd=self.vault_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_TIMEOUT,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                return {
+                    "error": result.stderr or "Reconciliation failed",
+                    "processed_entries": 0,
+                }
+
+            output = result.stdout.strip()
+
+            # Save updated plan
+            try:
+                self._save_content_plan(output, date.today())
+            except Exception as e:
+                logger.warning("Failed to save reconciled plan: %s", e)
+
+            return {"report": output, "processed_entries": 1}
+
+        except subprocess.TimeoutExpired:
+            return {"error": "Reconciliation timed out", "processed_entries": 0}
+        except Exception as e:
+            logger.exception("Unexpected error during reconciliation")
+            return {"error": str(e), "processed_entries": 0}
+
+    def edit_plan(self, user_request: str) -> dict[str, Any]:
+        """Edit current plan based on user request.
+
+        Args:
+            user_request: Natural language edit instruction.
+
+        Returns:
+            Updated plan report as dict.
+        """
+        plan_data = self.get_current_plan()
+        if "error" in plan_data:
+            return plan_data
+
+        seeds_content = self._load_all_seeds(max_weeks=4)
+        humanizer = self._load_humanizer_reference()
+
+        prompt = f"""Отредактируй контент-план по запросу пользователя.
+
+=== ТЕКУЩИЙ ПЛАН ({plan_data['week']}) ===
+{plan_data['plan']}
+=== END PLAN ===
+
+=== ДОСТУПНЫЕ SEEDS ===
+{seeds_content}
+=== END SEEDS ===
+
+=== HUMANIZER ===
+{humanizer}
+=== END HUMANIZER ===
+
+ЗАПРОС ПОЛЬЗОВАТЕЛЯ: {user_request}
+
+ЗАДАЧА:
+- Внеси запрошенные изменения в план
+- Сохрани общую структуру плана (дни, форматы, LinkedIn)
+- Используй seeds из списка если нужно заменить/добавить контент
+- Все hooks пиши живым языком по правилам HUMANIZER
+
+CRITICAL OUTPUT FORMAT:
+- Return the FULL updated plan in raw HTML for Telegram
+- NO markdown: no **, no ##, no ```, no tables
+- Allowed tags: <b>, <i>, <code>, <s>, <u>"""
+
+        try:
+            result = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions"],
+                input=prompt,
+                cwd=self.vault_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_TIMEOUT,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                return {
+                    "error": result.stderr or "Plan edit failed",
+                    "processed_entries": 0,
+                }
+
+            output = result.stdout.strip()
+
+            # Save updated plan
+            try:
+                self._save_content_plan(output, date.today())
+            except Exception as e:
+                logger.warning("Failed to save edited plan: %s", e)
+
+            return {"report": output, "processed_entries": 1}
+
+        except subprocess.TimeoutExpired:
+            return {"error": "Plan edit timed out", "processed_entries": 0}
+        except Exception as e:
+            logger.exception("Unexpected error during plan edit")
             return {"error": str(e), "processed_entries": 0}

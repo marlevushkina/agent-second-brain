@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from d_brain.bot.inline_keyboards import content_menu_keyboard, plan_menu_keyboard
 from d_brain.bot.states import DoCommandState
 
 router = Router(name="buttons")
@@ -45,18 +46,20 @@ async def btn_do(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text == "🌱 Контент")
 async def btn_content(message: Message) -> None:
-    """Handle Content button."""
-    from d_brain.bot.handlers.content import cmd_content
-
-    await cmd_content(message)
+    """Handle Content button - show inline sub-menu."""
+    await message.answer(
+        "🌱 <b>Контент</b> - выбери действие:",
+        reply_markup=content_menu_keyboard(),
+    )
 
 
 @router.message(F.text == "📋 План")
 async def btn_plan(message: Message) -> None:
-    """Handle Plan button."""
-    from d_brain.bot.handlers.content_plan import cmd_plan
-
-    await cmd_plan(message)
+    """Handle Plan button - show inline sub-menu."""
+    await message.answer(
+        "📋 <b>Контент-план</b> - выбери действие:",
+        reply_markup=plan_menu_keyboard(),
+    )
 
 
 @router.message(F.text == "❓ Помощь")

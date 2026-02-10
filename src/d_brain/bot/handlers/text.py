@@ -1,12 +1,16 @@
 """Text message handler."""
 
+import asyncio
 import logging
-from datetime import datetime
+from datetime import date, datetime
 
 from aiogram import Router
 from aiogram.types import Message
 
+from d_brain.bot.formatters import format_process_report, split_html_report
 from d_brain.config import get_settings
+from d_brain.services.git import VaultGit
+from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 
@@ -22,14 +26,90 @@ def _is_reply_to_bot(message: Message) -> bool:
     return reply.from_user is not None and reply.from_user.is_bot
 
 
+def _is_reply_to_plan(message: Message) -> bool:
+    """Check if user is replying to a plan message from the bot."""
+    if not _is_reply_to_bot(message):
+        return False
+    original = message.reply_to_message.text or ""
+    plan_markers = [
+        "контент-план", "Контент-план", "Content Plan",
+        "Якорный пост", "якорный пост",
+        "TELEGRAM:", "LINKEDIN:",
+        "Пн:", "Вт:", "Ср:", "Чт:", "Пт:",
+    ]
+    return any(marker in original for marker in plan_markers)
+
+
+async def _handle_plan_edit(message: Message) -> None:
+    """Handle reply to a plan message - edit the plan via Claude."""
+    status_msg = await message.answer("⏳ Редактирую план...")
+
+    settings = get_settings()
+    processor = ClaudeProcessor(
+        settings.vault_path,
+        settings.ticktick_client_id,
+        settings.ticktick_client_secret,
+        settings.ticktick_access_token,
+    )
+    git = VaultGit(settings.vault_path)
+
+    async def run_with_progress() -> dict:
+        task = asyncio.create_task(
+            asyncio.to_thread(processor.edit_plan, message.text),
+        )
+
+        elapsed = 0
+        while not task.done():
+            await asyncio.sleep(30)
+            elapsed += 30
+            if not task.done():
+                try:
+                    await status_msg.edit_text(
+                        f"⏳ Редактирую план... ({elapsed // 60}m {elapsed % 60}s)",
+                    )
+                except Exception:
+                    pass
+
+        return await task
+
+    report = await run_with_progress()
+
+    if "error" not in report:
+        await asyncio.to_thread(
+            git.commit_and_push,
+            f"chore: edit plan {date.today().isoformat()}",
+        )
+
+    formatted = format_process_report(report)
+    parts = split_html_report(formatted)
+
+    try:
+        await status_msg.edit_text(parts[0])
+    except Exception:
+        await status_msg.edit_text(parts[0], parse_mode=None)
+
+    for part in parts[1:]:
+        try:
+            await message.answer(part)
+        except Exception:
+            await message.answer(part, parse_mode=None)
+
+
 @router.message(lambda m: m.text is not None and not m.text.startswith("/"))
 async def handle_text(message: Message) -> None:
     """Handle text messages (excluding commands).
 
+    - Reply to plan message → edit plan via Claude
     - Reply to bot message → dialogue with Claude (with context of original message)
     - Plain text → save as thought to daily file
     """
     if not message.text or not message.from_user:
+        return
+
+    # If replying to a plan message — edit the plan
+    if _is_reply_to_plan(message):
+        logger.info("Reply to plan from user %s, editing plan", message.from_user.id)
+        await _handle_plan_edit(message)
         return
 
     # If replying to a bot message — treat as dialogue with context
