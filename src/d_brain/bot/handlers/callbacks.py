@@ -88,8 +88,10 @@ async def on_content_my_seeds(callback: CallbackQuery, state: FSMContext) -> Non
     for i, s in enumerate(unpublished, 1):
         lines.append(f"{i}. [{s['week']}] #{s['num']}: {s['title']}")
 
+    if result.get("dismissed_count"):
+        lines.append(f"🗑 Скрыто: {result['dismissed_count']}")
     lines.append("")
-    lines.append("↩️ Ответь номером - раскрою seed полностью")
+    lines.append("↩️ Номер - раскрыть seed | «удали 3,5» - скрыть")
 
     text = "\n".join(lines)
 
@@ -105,23 +107,41 @@ async def on_content_my_seeds(callback: CallbackQuery, state: FSMContext) -> Non
 
 @router.message(ContentSeedsState.waiting_for_number)
 async def on_seed_number(message: Message, state: FSMContext) -> None:
-    """Handle seed number selection."""
+    """Handle seed number selection or dismiss command."""
+    import re
+
     if not message.text:
         await state.clear()
         return
 
     text = message.text.strip()
+    data = await state.get_data()
+    seeds = data.get("seeds", [])
 
-    # Try to parse a number
+    # Check for dismiss command: "удали 3,5" / "убери 1, 4, 7"
+    dismiss_match = re.match(r"(?:удали|убери|удалить|убрать)\s+(.+)", text, re.IGNORECASE)
+    if dismiss_match:
+        numbers_str = dismiss_match.group(1)
+        nums = [int(n) for n in re.findall(r"\d+", numbers_str) if 1 <= int(n) <= len(seeds)]
+        if not nums:
+            await message.answer(f"❌ Введи числа от 1 до {len(seeds)}")
+            return
+
+        to_dismiss = [seeds[n - 1] for n in nums]
+        processor = _get_processor()
+        count = processor.dismiss_seeds(to_dismiss)
+
+        titles = ", ".join(f"#{seeds[n - 1]['num']}" for n in nums)
+        await state.clear()
+        await message.answer(f"🗑 Скрыто {count} seeds: {titles}\n\nНажми «📋 Мои seeds» чтобы обновить список.")
+        return
+
+    # Try to parse a number for seed expansion
     try:
         num = int(text)
     except ValueError:
         await state.clear()
-        # Not a number — let it fall through to other handlers
         return
-
-    data = await state.get_data()
-    seeds = data.get("seeds", [])
 
     if num < 1 or num > len(seeds):
         await message.answer(f"❌ Введи число от 1 до {len(seeds)}")

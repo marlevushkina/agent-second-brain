@@ -955,10 +955,48 @@ CRITICAL STYLE RULE:
         filename = f"{year}-W{week:02d}-plan.md"
         return (self.vault_path / "content" / "plans" / filename).exists()
 
+    @property
+    def _dismissed_path(self) -> Path:
+        return self.vault_path / "content" / "seeds" / ".dismissed.json"
+
+    def _load_dismissed(self) -> set[str]:
+        """Load set of dismissed seed keys like '2026-W07:3'."""
+        import json
+
+        if not self._dismissed_path.exists():
+            return set()
+        try:
+            data = json.loads(self._dismissed_path.read_text())
+            return set(data.get("dismissed", []))
+        except Exception:
+            return set()
+
+    def _save_dismissed(self, dismissed: set[str]) -> None:
+        """Save dismissed seed keys."""
+        import json
+
+        self._dismissed_path.parent.mkdir(parents=True, exist_ok=True)
+        self._dismissed_path.write_text(
+            json.dumps({"dismissed": sorted(dismissed)}, ensure_ascii=False, indent=2),
+        )
+
+    def dismiss_seeds(self, seeds_to_dismiss: list[dict]) -> int:
+        """Mark seeds as dismissed. Returns count of newly dismissed."""
+        dismissed = self._load_dismissed()
+        count = 0
+        for s in seeds_to_dismiss:
+            key = f"{s['week']}:{s['num']}"
+            if key not in dismissed:
+                dismissed.add(key)
+                count += 1
+        self._save_dismissed(dismissed)
+        return count
+
     def list_unpublished_seeds(self, channel_posts: str) -> dict[str, Any]:
         """List all seeds, marking which have been published.
 
         Uses a lightweight Claude call to match seed titles with channel posts.
+        Also filters out manually dismissed seeds.
 
         Args:
             channel_posts: Formatted recent channel posts text.
@@ -970,10 +1008,21 @@ CRITICAL STYLE RULE:
         if not all_seeds:
             return {"error": "Нет seeds. Запусти /content для генерации."}
 
-        # Build compact title list for Claude
+        # Filter out dismissed seeds
+        dismissed = self._load_dismissed()
+        active_seeds = [
+            s for s in all_seeds
+            if f"{s['week']}:{s['num']}" not in dismissed
+        ]
+        dismissed_count = len(all_seeds) - len(active_seeds)
+
+        if not active_seeds:
+            return {"error": "Все seeds удалены или опубликованы. Запусти /content для новых."}
+
+        # Build compact title list for Claude (only active seeds)
         titles_text = "\n".join(
             f"{i + 1}. [{s['week']}] Seed #{s['num']}: {s['title']}"
-            for i, s in enumerate(all_seeds)
+            for i, s in enumerate(active_seeds)
         )
 
         prompt = f"""Ты определяешь, какие content seeds УЖЕ были опубликованы как посты в TG-канале.
@@ -1011,30 +1060,32 @@ CRITICAL STYLE RULE:
             if result.returncode == 0 and result.stdout.strip().lower() != "none":
                 import re
                 numbers = re.findall(r"\d+", result.stdout.strip())
-                published_indices = {int(n) for n in numbers if 1 <= int(n) <= len(all_seeds)}
+                published_indices = {int(n) for n in numbers if 1 <= int(n) <= len(active_seeds)}
 
             # Build result: only unpublished
             unpublished = []
-            for i, s in enumerate(all_seeds):
+            for i, s in enumerate(active_seeds):
                 s["published"] = (i + 1) in published_indices
                 if not s["published"]:
                     unpublished.append(s)
 
             return {
-                "seeds": all_seeds,
+                "seeds": active_seeds,
                 "unpublished": unpublished,
                 "total": len(all_seeds),
                 "published_count": len(published_indices),
+                "dismissed_count": dismissed_count,
             }
 
         except Exception as e:
             logger.warning("Failed to match seeds with channel: %s", e)
-            # Fallback: return all seeds as unpublished
+            # Fallback: return active seeds as unpublished
             return {
-                "seeds": all_seeds,
-                "unpublished": all_seeds,
+                "seeds": active_seeds,
+                "unpublished": active_seeds,
                 "total": len(all_seeds),
                 "published_count": 0,
+                "dismissed_count": dismissed_count,
             }
 
     def reconcile_plan_with_channel(self, channel_posts: str) -> dict[str, Any]:
