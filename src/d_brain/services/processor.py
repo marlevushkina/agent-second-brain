@@ -593,6 +593,27 @@ week: {year}-W{week:02d}
             return ref_path.read_text()
         return ""
 
+    def _load_tone_of_voice(self) -> str:
+        """Load combined tone of voice + humanizer reference."""
+        ref_path = self.vault_path / ".claude/skills/content-seeds/references/tone-of-voice.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
+    def _load_strategy(self) -> str:
+        """Load content strategy reference."""
+        ref_path = self.vault_path / ".claude/skills/content-seeds/references/strategy.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
+    def _load_icp(self) -> str:
+        """Load ICP & positioning reference."""
+        ref_path = self.vault_path / ".claude/skills/content-seeds/references/icp.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
     def _load_tone_examples(self) -> str:
         """Load tone of voice examples from real channel posts."""
         ref_path = self.vault_path / ".claude/skills/content-seeds/references/tone-examples.md"
@@ -610,7 +631,9 @@ week: {year}-W{week:02d}
 
         # Load skill and references
         skill_content = self._load_content_seeds_skill()
-        humanizer_content = self._load_humanizer_reference()
+        tone_of_voice = self._load_tone_of_voice()
+        strategy = self._load_strategy()
+        icp = self._load_icp()
         tone_examples = self._load_tone_examples()
 
         # Collect raw material in Python (more reliable than asking Claude to read files)
@@ -623,8 +646,12 @@ week: {year}-W{week:02d}
 
         # Build references section
         references = ""
-        if humanizer_content:
-            references += f"\n=== HUMANIZER REFERENCE ===\n{humanizer_content}\n=== END HUMANIZER ===\n"
+        if tone_of_voice:
+            references += f"\n=== TONE OF VOICE & HUMANIZER ===\n{tone_of_voice}\n=== END TONE OF VOICE ===\n"
+        if strategy:
+            references += f"\n=== CONTENT STRATEGY ===\n{strategy}\n=== END STRATEGY ===\n"
+        if icp:
+            references += f"\n=== ICP & POSITIONING ===\n{icp}\n=== END ICP ===\n"
         if tone_examples:
             references += f"\n=== TONE OF VOICE EXAMPLES ===\n{tone_examples}\n=== END TONE EXAMPLES ===\n"
 
@@ -644,8 +671,11 @@ CRITICAL OUTPUT FORMAT:
 - Allowed tags: <b>, <i>, <code>, <s>, <u>
 - Follow the output format from SKILL INSTRUCTIONS exactly
 
-CRITICAL STYLE RULE:
-- Применяй ВСЕ правила из HUMANIZER REFERENCE
+CRITICAL RULES:
+- Оценивай seeds по матрице из CONTENT STRATEGY (арка, функция, тон)
+- Каждый seed ОБЯЗАН принадлежать одной из 3 нарративных арок
+- Целься в конкретный сегмент ICP - кто прочтёт и кивнёт?
+- Применяй ВСЕ правила из TONE OF VOICE (голос Марины + анти-AI фильтр)
 - Каждый hook проверяй на AI-паттерны перед выдачей
 - Пиши как живой человек, не как ChatGPT"""
 
@@ -764,7 +794,9 @@ week: {year}-W{week:02d}
 
         # Load skill and context
         skill_content = self._load_content_planner_skill()
-        humanizer_content = self._load_humanizer_reference()
+        tone_of_voice = self._load_tone_of_voice()
+        strategy = self._load_strategy()
+        icp = self._load_icp()
         seeds_content = self._load_all_seeds()
         monthly_goals = self._load_monthly_goals()
 
@@ -786,16 +818,21 @@ week: {year}-W{week:02d}
             )
         extra_context = "\n\n".join(context_parts)
 
+        # Build references
+        references = ""
+        if tone_of_voice:
+            references += f"\n=== TONE OF VOICE & HUMANIZER ===\n{tone_of_voice}\n=== END TONE OF VOICE ===\n"
+        if strategy:
+            references += f"\n=== CONTENT STRATEGY ===\n{strategy}\n=== END STRATEGY ===\n"
+        if icp:
+            references += f"\n=== ICP & POSITIONING ===\n{icp}\n=== END ICP ===\n"
+
         prompt = f"""Сегодня {today}. Составь контент-план на неделю.
 
 === SKILL INSTRUCTIONS ===
 {skill_content}
 === END SKILL ===
-
-=== HUMANIZER REFERENCE ===
-{humanizer_content}
-=== END HUMANIZER ===
-
+{references}
 === CONTENT SEEDS ===
 {seeds_content}
 === END CONTENT SEEDS ===
@@ -808,8 +845,11 @@ CRITICAL OUTPUT FORMAT:
 - Allowed tags: <b>, <i>, <code>, <s>, <u>
 - Follow the output format from SKILL INSTRUCTIONS exactly
 
-CRITICAL STYLE RULE:
-- Все hooks пиши живым языком по правилам HUMANIZER REFERENCE
+CRITICAL RULES:
+- Чередуй нарративные арки по правилам CONTENT STRATEGY
+- Проверяй последние посты канала - не повторять тему
+- Каждый пост целься в конкретный сегмент ICP
+- Все hooks пиши живым языком по правилам TONE OF VOICE
 - Никакого AI-стиля, канцелярита, шаблонных переходов"""
 
         try:
@@ -1101,7 +1141,8 @@ CRITICAL STYLE RULE:
         if "error" in plan_data:
             return plan_data
 
-        humanizer = self._load_humanizer_reference()
+        tone_of_voice = self._load_tone_of_voice()
+        strategy = self._load_strategy()
 
         prompt = f"""Сравни контент-план с опубликованными постами канала.
 
@@ -1113,20 +1154,25 @@ CRITICAL STYLE RULE:
 {channel_posts}
 === END POSTS ===
 
-=== HUMANIZER ===
-{humanizer}
-=== END HUMANIZER ===
+=== TONE OF VOICE & HUMANIZER ===
+{tone_of_voice}
+=== END TONE OF VOICE ===
+
+=== CONTENT STRATEGY ===
+{strategy}
+=== END STRATEGY ===
 
 ЗАДАЧА:
 1. Определи какие посты из плана уже опубликованы - отметь их ✅
 2. Для неопубликованных - оставь как есть или скорректируй если нужно
-3. Верни полный обновлённый план
+3. Проверь чередование арок по правилам CONTENT STRATEGY
+4. Верни полный обновлённый план
 
 CRITICAL OUTPUT FORMAT:
 - Return ONLY raw HTML for Telegram (parse_mode=HTML)
 - NO markdown: no **, no ##, no ```, no tables
 - Allowed tags: <b>, <i>, <code>, <s>, <u>
-- Все hooks пиши живым языком по правилам HUMANIZER"""
+- Все hooks пиши живым языком по правилам TONE OF VOICE"""
 
         try:
             result = subprocess.run(
@@ -1175,7 +1221,18 @@ CRITICAL OUTPUT FORMAT:
             return plan_data
 
         seeds_content = self._load_all_seeds(max_weeks=4)
-        humanizer = self._load_humanizer_reference()
+        tone_of_voice = self._load_tone_of_voice()
+        strategy = self._load_strategy()
+        icp = self._load_icp()
+
+        # Build references
+        references = ""
+        if tone_of_voice:
+            references += f"\n=== TONE OF VOICE & HUMANIZER ===\n{tone_of_voice}\n=== END TONE OF VOICE ===\n"
+        if strategy:
+            references += f"\n=== CONTENT STRATEGY ===\n{strategy}\n=== END STRATEGY ===\n"
+        if icp:
+            references += f"\n=== ICP & POSITIONING ===\n{icp}\n=== END ICP ===\n"
 
         prompt = f"""Отредактируй контент-план по запросу пользователя.
 
@@ -1186,18 +1243,15 @@ CRITICAL OUTPUT FORMAT:
 === ДОСТУПНЫЕ SEEDS ===
 {seeds_content}
 === END SEEDS ===
-
-=== HUMANIZER ===
-{humanizer}
-=== END HUMANIZER ===
-
+{references}
 ЗАПРОС ПОЛЬЗОВАТЕЛЯ: {user_request}
 
 ЗАДАЧА:
 - Внеси запрошенные изменения в план
 - Сохрани общую структуру плана (дни, форматы, LinkedIn)
 - Используй seeds из списка если нужно заменить/добавить контент
-- Все hooks пиши живым языком по правилам HUMANIZER
+- Чередуй арки по правилам CONTENT STRATEGY
+- Все hooks пиши живым языком по правилам TONE OF VOICE
 
 CRITICAL OUTPUT FORMAT:
 - Return the FULL updated plan in raw HTML for Telegram
