@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "ticktick": {
-      "command": "npx",
-      "args": ["-y", "@alexarevalo.ai/mcp-server-ticktick"],
+      "command": "/usr/local/bin/mcp-server-ticktick",
+      "args": [],
       "env": {
         "TICKTICK_CLIENT_ID": "${TICKTICK_CLIENT_ID}",
         "TICKTICK_CLIENT_SECRET": "${TICKTICK_CLIENT_SECRET}",

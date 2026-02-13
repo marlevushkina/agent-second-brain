@@ -30,6 +30,34 @@ class ClaudeProcessor:
         self.ticktick_access_token = ticktick_access_token
         self._mcp_config_path = (self.vault_path.parent / "mcp-config.json").resolve()
 
+    def _build_subprocess_env(self) -> dict[str, str]:
+        """Build environment for Claude subprocess.
+
+        Ensures PATH, HOME, and MCP-related vars are set correctly,
+        especially when running from systemd where env is minimal.
+        """
+        env = os.environ.copy()
+        # Ensure critical paths are available (systemd may have minimal PATH)
+        path = env.get("PATH", "/usr/bin:/bin")
+        for extra in ["/usr/local/bin", os.path.expanduser("~/.local/bin")]:
+            if extra not in path:
+                path = f"{extra}:{path}"
+        env["PATH"] = path
+        # HOME is needed by many tools
+        if "HOME" not in env:
+            env["HOME"] = os.path.expanduser("~")
+        # MCP server startup settings
+        env["MCP_TIMEOUT"] = "30000"
+        env["MAX_MCP_OUTPUT_TOKENS"] = "50000"
+        # TickTick credentials
+        if self.ticktick_client_id:
+            env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
+        if self.ticktick_client_secret:
+            env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
+        if self.ticktick_access_token:
+            env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
+        return env
+
     def _load_skill_content(self) -> str:
         """Load dbrain-processor skill content for inclusion in prompt.
 
@@ -196,14 +224,8 @@ CRITICAL OUTPUT FORMAT:
 - If entries already processed, return status report in same HTML format"""
 
         try:
-            # Pass TickTick credentials to Claude subprocess
-            env = os.environ.copy()
-            if self.ticktick_client_id:
-                env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
-            if self.ticktick_client_secret:
-                env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
-            if self.ticktick_access_token:
-                env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
+            # Pass TickTick credentials + robust env to Claude subprocess
+            env = self._build_subprocess_env()
 
             result = subprocess.run(
                 [
@@ -304,13 +326,7 @@ EXECUTION:
 3. Return HTML status report with results"""
 
         try:
-            env = os.environ.copy()
-            if self.ticktick_client_id:
-                env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
-            if self.ticktick_client_secret:
-                env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
-            if self.ticktick_access_token:
-                env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
+            env = self._build_subprocess_env()
 
             result = subprocess.run(
                 [
@@ -383,13 +399,7 @@ CRITICAL OUTPUT FORMAT:
 - Be concise - Telegram has 4096 char limit"""
 
         try:
-            env = os.environ.copy()
-            if self.ticktick_client_id:
-                env["TICKTICK_CLIENT_ID"] = self.ticktick_client_id
-            if self.ticktick_client_secret:
-                env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
-            if self.ticktick_access_token:
-                env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
+            env = self._build_subprocess_env()
 
             result = subprocess.run(
                 [
@@ -680,7 +690,7 @@ CRITICAL RULES:
 - Пиши как живой человек, не как ChatGPT"""
 
         try:
-            env = os.environ.copy()
+            env = self._build_subprocess_env()
 
             result = subprocess.run(
                 [
@@ -853,7 +863,7 @@ CRITICAL RULES:
 - Никакого AI-стиля, канцелярита, шаблонных переходов"""
 
         try:
-            env = os.environ.copy()
+            env = self._build_subprocess_env()
 
             result = subprocess.run(
                 [
