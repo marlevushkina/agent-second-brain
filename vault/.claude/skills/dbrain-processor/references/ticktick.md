@@ -176,7 +176,9 @@ Step 5: report results grouped by project
 ```
 
 CRITICAL:
-- Do NOT skip projects. If there are 8 projects, call get_project_with_data 8 times.
+- Do NOT skip ANY project. Inbox is a project too — it MUST be scanned.
+- If get_user_projects returns 8 items, call get_project_with_data exactly 8 times.
+- Inbox often contains the most tasks — never skip it.
 - A task is overdue if its dueDate < today AND status == 0 (not completed).
 - When rescheduling, respect workload balancing (see above): max 3 tasks per day.
 - Report must list EVERY moved/found task with its project name.
