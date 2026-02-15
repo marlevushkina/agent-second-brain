@@ -161,6 +161,28 @@ If unclear → use Inbox (default project).
 
 ---
 
+## Bulk Operations (overdue, reschedule, show all)
+
+When user asks to move/show/list overdue tasks or tasks for a period:
+
+**MANDATORY: scan ALL projects, not just one.**
+
+```
+Step 1: get_user_projects → save full list
+Step 2: for EACH project → get_project_with_data(projectId)
+Step 3: collect ALL tasks matching the filter (overdue, today, this week, etc.)
+Step 4: perform the action on ALL matched tasks
+Step 5: report results grouped by project
+```
+
+CRITICAL:
+- Do NOT skip projects. If there are 8 projects, call get_project_with_data 8 times.
+- A task is overdue if its dueDate < today AND status == 0 (not completed).
+- When rescheduling, respect workload balancing (see above): max 3 tasks per day.
+- Report must list EVERY moved/found task with its project name.
+
+---
+
 ## Anti-Patterns (НЕ СОЗДАВАТЬ)
 
 Based on user preferences:
