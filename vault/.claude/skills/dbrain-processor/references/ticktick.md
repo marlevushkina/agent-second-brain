@@ -117,7 +117,14 @@ create_task:
   projectId: "..."     # from get_user_projects
   priority: 3          # TickTick priority (0-5)
   dueDate: "2026-02-15T00:00:00+0000"  # ISO format
+  isAllDay: true       # ALWAYS unless user specifies exact time
 ```
+
+### Time Rule
+- **Default: isAllDay: true** — do NOT set a specific time unless user explicitly says one (e.g. "в 14:00", "к 9 утра").
+- When rescheduling/updating tasks: preserve isAllDay from the original task. If the original had no time, keep isAllDay: true.
+- WRONG: setting dueDate to "T01:00:00" or any arbitrary time when user just says "на понедельник".
+- RIGHT: isAllDay: true + dueDate with date only portion.
 
 ### Task Title Style
 
