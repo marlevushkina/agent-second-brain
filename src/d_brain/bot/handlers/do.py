@@ -96,6 +96,8 @@ async def process_request(message: Message, prompt: str, user_id: int = 0) -> No
         settings.ticktick_client_id,
         settings.ticktick_client_secret,
         settings.ticktick_access_token,
+        settings.planfix_account,
+        settings.planfix_token,
     )
 
     async def run_with_progress() -> dict:

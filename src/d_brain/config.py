@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     ticktick_client_id: str = Field(default="", description="TickTick OAuth Client ID")
     ticktick_client_secret: str = Field(default="", description="TickTick OAuth Client Secret")
     ticktick_access_token: str = Field(default="", description="TickTick OAuth Access Token")
+    planfix_account: str = Field(default="", description="Planfix account name (subdomain)")
+    planfix_token: str = Field(default="", description="Planfix REST API token")
     google_docs_folder_id: str = Field(
         default="",
         description="Google Drive folder ID with Fireflies transcripts",

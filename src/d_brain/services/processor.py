@@ -23,11 +23,15 @@ class ClaudeProcessor:
         ticktick_client_id: str = "",
         ticktick_client_secret: str = "",
         ticktick_access_token: str = "",
+        planfix_account: str = "",
+        planfix_token: str = "",
     ) -> None:
         self.vault_path = Path(vault_path)
         self.ticktick_client_id = ticktick_client_id
         self.ticktick_client_secret = ticktick_client_secret
         self.ticktick_access_token = ticktick_access_token
+        self.planfix_account = planfix_account
+        self.planfix_token = planfix_token
         self._mcp_config_path = (self.vault_path.parent / "mcp-config.json").resolve()
 
     def _build_subprocess_env(self) -> dict[str, str]:
@@ -56,6 +60,11 @@ class ClaudeProcessor:
             env["TICKTICK_CLIENT_SECRET"] = self.ticktick_client_secret
         if self.ticktick_access_token:
             env["TICKTICK_ACCESS_TOKEN"] = self.ticktick_access_token
+        # Planfix credentials
+        if self.planfix_account:
+            env["PLANFIX_ACCOUNT"] = self.planfix_account
+        if self.planfix_token:
+            env["PLANFIX_TOKEN"] = self.planfix_token
         return env
 
     def _load_skill_content(self) -> str:
@@ -72,6 +81,13 @@ class ClaudeProcessor:
     def _load_ticktick_reference(self) -> str:
         """Load TickTick reference for inclusion in prompt."""
         ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/ticktick.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
+    def _load_planfix_reference(self) -> str:
+        """Load Planfix reference for inclusion in prompt."""
+        ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/planfix.md"
         if ref_path.exists():
             return ref_path.read_text()
         return ""
@@ -208,13 +224,15 @@ week: {year}-W{week:02d}
 {skill_content}
 === END SKILL ===
 
-ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
+ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что TickTick MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools И mcp__planfix__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
-- Для задач: вызови mcp__ticktick__create_task tool
+- Для ЛИЧНЫХ задач и менторства: mcp__ticktick__create_task
+- Для КОМАНДНЫХ задач (SMMEKALKA, C-GROWTH, KLEVERS): mcp__planfix__createTask
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
+- См. references/planfix.md для правил маршрутизации задач
 
 CRITICAL OUTPUT FORMAT:
 - Return ONLY raw HTML for Telegram (parse_mode=HTML)
@@ -291,6 +309,7 @@ CRITICAL OUTPUT FORMAT:
 
         # Load context
         ticktick_ref = self._load_ticktick_reference()
+        planfix_ref = self._load_planfix_reference()
         session_context = self._get_session_context(user_id)
 
         prompt = f"""Ты - персональный ассистент d-brain.
@@ -303,11 +322,17 @@ CONTEXT:
 {ticktick_ref}
 === END REFERENCE ===
 
+=== PLANFIX REFERENCE ===
+{planfix_ref}
+=== END REFERENCE ===
+
 ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools И mcp__planfix__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
+- Для ЛИЧНЫХ задач и менторства: mcp__ticktick__*
+- Для КОМАНДНЫХ задач (SMMEKALKA, C-GROWTH, KLEVERS): mcp__planfix__*
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
 USER REQUEST:
@@ -322,7 +347,7 @@ CRITICAL OUTPUT FORMAT:
 
 EXECUTION:
 1. Analyze the request
-2. Call MCP tools directly (mcp__ticktick__*, read/write files)
+2. Call MCP tools directly (mcp__ticktick__*, mcp__planfix__*, read/write files)
 3. Return HTML status report with results"""
 
         try:
@@ -380,13 +405,14 @@ EXECUTION:
 ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools И mcp__planfix__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
 - Для задач в проекте: вызови mcp__ticktick__get_project_with_data tool
+- Для командных задач: вызови mcp__planfix__searchPlanfixTask tool
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
 WORKFLOW:
-1. Собери данные за неделю (daily файлы в vault/daily/, completed tasks через MCP)
+1. Собери данные за неделю (daily файлы в vault/daily/, completed tasks через MCP — и TickTick, и Planfix)
 2. Проанализируй прогресс по целям (goals/3-weekly.md)
 3. Определи победы и вызовы
 4. Сгенерируй HTML отчёт

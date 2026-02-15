@@ -91,7 +91,8 @@ Run daily processing via `/process` command or automatically at 21:00.
 | `dbrain-processor` | Main daily processing |
 | `content-seeds` | Content seed generation with humanizer |
 | `content-planner` | Weekly content plan (TG + LinkedIn) |
-| `ticktick` | Task management via MCP |
+| `ticktick` | Personal task management via MCP |
+| `planfix` | Team task management via MCP |
 | `graph-builder` | Vault link analysis and building |
 
 ## Available Agents
@@ -113,7 +114,8 @@ See `.claude/rules/` for format requirements:
 
 ## MCP Servers
 
-- `ticktick` — Task management (create, get, complete, update tasks)
+- `ticktick` — Personal task management (create, get, complete, update tasks)
+- `planfix` — Team task management for SMMEKALKA, C-GROWTH, KLEVERS (create, search, comment)
 - `filesystem` — Vault file access
 
 ## CRITICAL: Tool Usage Policy
@@ -122,7 +124,8 @@ See `.claude/rules/` for format requirements:
 
 Не существует ситуации, когда MCP tools "недоступны". Если ты получил эту инструкцию — у тебя есть доступ к:
 
-- `mcp__ticktick__*` — все TickTick операции
+- `mcp__ticktick__*` — все TickTick операции (личные задачи)
+- `mcp__planfix__*` — все Planfix операции (командные задачи)
 - File read/write — все файловые операции
 
 ЗАПРЕЩЁННЫЕ ПАТТЕРНЫ (НИКОГДА не делай это):
@@ -179,13 +182,20 @@ When invoked via /do, Claude receives arbitrary user requests. Common patterns:
 
 ## MCP Tools Available
 
-**TickTick (mcp__ticktick__*):**
+**TickTick (mcp__ticktick__*) — личные задачи:**
 - `create_task` — создать задачу
 - `get_task_by_ids` — получить задачи по ID
 - `complete_task` — завершить задачу
 - `update_task` — изменить задачу
 - `get_user_projects` — список проектов
 - `get_project_with_data` — задачи в проекте
+
+**Planfix (mcp__planfix__*) — командные задачи (SMMEKALKA, C-GROWTH, KLEVERS):**
+- `createTask` — создать задачу
+- `searchPlanfixTask` — поиск задач
+- `getTask` — получить задачу по ID
+- `getChildTasks` — дочерние задачи
+- `createComment` — добавить комментарий
 
 **Filesystem:**
 - Read/write vault files

@@ -29,10 +29,18 @@ CORRECT:
 
 ## MCP Tools Required
 
+### TickTick (personal tasks + mentoring)
 mcp__ticktick__create_task — Create tasks
 mcp__ticktick__get_task_by_ids — Find tasks by ID
 mcp__ticktick__get_user_projects — List projects
 mcp__ticktick__get_project_with_data — Get tasks in project
+
+### Planfix (team tasks: SMMEKALKA, C-GROWTH, KLEVERS)
+mcp__planfix__createTask — Create team tasks
+mcp__planfix__searchPlanfixTask — Search tasks
+mcp__planfix__getTask — Get task details
+mcp__planfix__getChildTasks — Get subtasks
+mcp__planfix__createComment — Add comment to task
 
 ## CRITICAL: MCP Tool Usage
 
@@ -45,6 +53,11 @@ mcp__ticktick__get_project_with_data — Get tasks in project
 - `mcp__ticktick__update_task`
 - `mcp__ticktick__get_user_projects`
 - `mcp__ticktick__get_project_with_data`
+- `mcp__planfix__createTask`
+- `mcp__planfix__searchPlanfixTask`
+- `mcp__planfix__getTask`
+- `mcp__planfix__getChildTasks`
+- `mcp__planfix__createComment`
 
 ### Обязательный алгоритм:
 
@@ -185,7 +198,8 @@ Types: [voice], [text], [forward from: Name], [photo]
 
 ## Classification
 
-task → TickTick (see references/ticktick.md)
+task (personal/mentoring) → TickTick (see references/ticktick.md)
+task (team: SMMEKALKA, C-GROWTH, KLEVERS) → Planfix (see references/planfix.md)
 idea/reflection/learning → thoughts/ (see references/classification.md)
 
 ## Priority Rules
@@ -298,7 +312,8 @@ Max length: 4096 characters.
 Read these files as needed:
 - references/about.md — User profile, decision filters
 - references/classification.md — Entry classification rules
-- references/ticktick.md — Task creation details
+- references/ticktick.md — Personal task creation (TickTick)
+- references/planfix.md — Team task management (Planfix)
 - references/goals.md — Goal alignment logic
 - references/process-goals.md — Process vs outcome goals, transformation patterns
 - references/links.md — Wiki-links building

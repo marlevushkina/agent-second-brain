@@ -50,6 +50,8 @@ async def _handle_plan_edit(message: Message) -> None:
         settings.ticktick_client_id,
         settings.ticktick_client_secret,
         settings.ticktick_access_token,
+        settings.planfix_account,
+        settings.planfix_token,
     )
     git = VaultGit(settings.vault_path)
 

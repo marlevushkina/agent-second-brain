@@ -25,6 +25,8 @@ def _get_processor() -> ClaudeProcessor:
         settings.ticktick_client_id,
         settings.ticktick_client_secret,
         settings.ticktick_access_token,
+        settings.planfix_account,
+        settings.planfix_token,
     )
 
 

@@ -8,6 +8,14 @@
         "TICKTICK_CLIENT_SECRET": "${TICKTICK_CLIENT_SECRET}",
         "TICKTICK_ACCESS_TOKEN": "${TICKTICK_ACCESS_TOKEN}"
       }
+    },
+    "planfix": {
+      "command": "/usr/local/bin/planfix-mcp-server",
+      "args": [],
+      "env": {
+        "PLANFIX_ACCOUNT": "${PLANFIX_ACCOUNT}",
+        "PLANFIX_TOKEN": "${PLANFIX_TOKEN}"
+      }
     }
   }
 }
