@@ -52,12 +52,12 @@ export const TickTickTaskSchema = z.object({
     desc: z.string().optional().nullable(),
     timeZone: z.string().optional().nullable(),
     repeatFlag: z.string().optional().nullable(),
-    startDate: z.string().optional().nullable(),
-    dueDate: z.string().optional().nullable(),
+    startDate: z.union([z.string(), z.number()]).optional().nullable(),
+    dueDate: z.union([z.string(), z.number()]).optional().nullable(),
     reminders: z.array(z.string()).optional().nullable(),
     priority: z.number().optional().nullable(),
     status: z.number(),
-    completedTime: z.string().optional().nullable(),
+    completedTime: z.union([z.string(), z.number()]).optional().nullable(),
     sortOrder: z.number().optional().nullable(),
     items: z
         .array(z.object({
@@ -65,10 +65,10 @@ export const TickTickTaskSchema = z.object({
         status: z.number(),
         title: z.string(),
         sortOrder: z.number().optional().nullable(),
-        startDate: z.string().optional().nullable(),
+        startDate: z.union([z.string(), z.number()]).optional().nullable(),
         isAllDay: z.boolean().optional().nullable(),
         timeZone: z.string().optional().nullable(),
-        completedTime: z.string().optional().nullable(),
+        completedTime: z.union([z.string(), z.number()]).optional().nullable(),
     }).passthrough())
         .optional()
         .nullable(),
@@ -93,10 +93,10 @@ export const TickTickCheckListItemSchema = z.object({
         .nullable()
         .describe('The completion status of subtask. Normal: 0, Completed: 1'),
     completedTime: z
-        .string()
+        .union([z.string(), z.number()])
         .optional()
         .nullable()
-        .describe(`Subtask item completed time in "yyyy-MM-dd'T'HH:mm:ssZ" format`),
+        .describe(`Subtask item completed time in "yyyy-MM-dd'T'HH:mm:ssZ" format or unix timestamp`),
 });
 TYPES_EOF
 echo "  Patched common/types.js"
