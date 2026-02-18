@@ -16,6 +16,13 @@
         "PLANFIX_ACCOUNT": "${PLANFIX_ACCOUNT}",
         "PLANFIX_TOKEN": "${PLANFIX_TOKEN}"
       }
+    },
+    "google-calendar": {
+      "command": "npx",
+      "args": ["-y", "@cocal/google-calendar-mcp"],
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS": "${GOOGLE_OAUTH_CREDENTIALS}"
+      }
     }
   }
 }

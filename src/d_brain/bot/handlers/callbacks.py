@@ -27,6 +27,7 @@ def _get_processor() -> ClaudeProcessor:
         settings.ticktick_access_token,
         settings.planfix_account,
         settings.planfix_token,
+        settings.google_calendar_credentials,
     )
 
 

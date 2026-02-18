@@ -98,6 +98,7 @@ async def process_request(message: Message, prompt: str, user_id: int = 0) -> No
         settings.ticktick_access_token,
         settings.planfix_account,
         settings.planfix_token,
+        settings.google_calendar_credentials,
     )
 
     async def run_with_progress() -> dict:

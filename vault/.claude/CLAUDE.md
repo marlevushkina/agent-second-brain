@@ -116,6 +116,7 @@ See `.claude/rules/` for format requirements:
 
 - `ticktick` — Personal task management (create, get, complete, update tasks)
 - `planfix` — Team task management for SMMEKALKA, C-GROWTH, KLEVERS (create, search, comment)
+- `google-calendar` — Google Calendar management (create, list, update, delete events, check availability)
 - `filesystem` — Vault file access
 
 ## CRITICAL: Tool Usage Policy
@@ -126,6 +127,7 @@ See `.claude/rules/` for format requirements:
 
 - `mcp__ticktick__*` — все TickTick операции (личные задачи)
 - `mcp__planfix__*` — все Planfix операции (командные задачи)
+- `mcp__google-calendar__*` — все Google Calendar операции (встречи, события)
 - File read/write — все файловые операции
 
 ЗАПРЕЩЁННЫЕ ПАТТЕРНЫ (НИКОГДА не делай это):
@@ -196,6 +198,19 @@ When invoked via /do, Claude receives arbitrary user requests. Common patterns:
 - `getTask` — получить задачу по ID
 - `getChildTasks` — дочерние задачи
 - `createComment` — добавить комментарий
+
+**Google Calendar (mcp__google-calendar__*) — встречи и события:**
+- `list-calendars` — список календарей
+- `list-events` — события за период
+- `get-event` — детали события по ID
+- `search-events` — поиск событий
+- `create-event` — создать событие
+- `update-event` — изменить событие
+- `delete-event` — удалить событие
+- `respond-to-event` — ответить на приглашение
+- `get-freebusy` — проверить занятость
+- `get-current-time` — текущее время в timezone календаря
+- `list-colors` — доступные цвета событий
 
 **Filesystem:**
 - Read/write vault files

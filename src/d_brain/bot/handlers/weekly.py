@@ -32,6 +32,7 @@ async def cmd_weekly(message: Message) -> None:
         settings.ticktick_access_token,
         settings.planfix_account,
         settings.planfix_token,
+        settings.google_calendar_credentials,
     )
     git = VaultGit(settings.vault_path)
 

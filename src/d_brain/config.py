@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     ticktick_access_token: str = Field(default="", description="TickTick OAuth Access Token")
     planfix_account: str = Field(default="", description="Planfix account name (subdomain)")
     planfix_token: str = Field(default="", description="Planfix REST API token")
+    google_calendar_credentials: str = Field(
+        default="",
+        description="Path to Google OAuth credentials JSON for Calendar",
+        validation_alias=AliasChoices(
+            "google_calendar_credentials", "google_oauth_credentials"
+        ),
+    )
     google_docs_folder_id: str = Field(
         default="",
         description="Google Drive folder ID with Fireflies transcripts",

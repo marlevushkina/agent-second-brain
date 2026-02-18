@@ -273,10 +273,21 @@ collect_tokens() {
         "true"
 
     prompt_token \
-        "6/6: TickTick Access Token (optional)" \
+        "6/8: TickTick Access Token (optional)" \
         "Run: npx @alexarevalo.ai/mcp-server-ticktick auth" \
         "https://developer.ticktick.com/" \
         "TICKTICK_ACCESS_TOKEN" \
+        "true"
+
+    prompt_token \
+        "7/8: Google Calendar OAuth credentials path (optional)" \
+        "Path to OAuth credentials JSON from Google Cloud Console:
+1. Create project at console.cloud.google.com
+2. Enable Google Calendar API
+3. Create OAuth 2.0 credentials (Desktop app)
+4. Download JSON and provide the path" \
+        "https://console.cloud.google.com/" \
+        "GOOGLE_OAUTH_CREDENTIALS" \
         "true"
 }
 
@@ -297,6 +308,9 @@ DEEPGRAM_API_KEY=$DEEPGRAM_API_KEY
 TICKTICK_CLIENT_ID=$TICKTICK_CLIENT_ID
 TICKTICK_CLIENT_SECRET=$TICKTICK_CLIENT_SECRET
 TICKTICK_ACCESS_TOKEN=$TICKTICK_ACCESS_TOKEN
+
+# Google Calendar OAuth credentials JSON path (optional)
+GOOGLE_OAUTH_CREDENTIALS=$GOOGLE_OAUTH_CREDENTIALS
 
 # Path to vault (don't change)
 VAULT_PATH=./vault

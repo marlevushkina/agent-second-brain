@@ -288,6 +288,7 @@ collect_tokens() {
     echo "  - Your Telegram ID (from @userinfobot)"
     echo "  - Deepgram API Key (from console.deepgram.com)"
     echo "  - TickTick OAuth credentials (from developer.ticktick.com)"
+    echo "  - Google Calendar OAuth credentials JSON (from console.cloud.google.com) [optional]"
     echo ""
 
     # Telegram Bot Token
@@ -335,6 +336,10 @@ collect_tokens() {
 
     ask "TickTick Access Token (from OAuth flow):"
     read -r TICKTICK_ACCESS_TOKEN
+
+    # Google Calendar OAuth Credentials (optional)
+    ask "Google Calendar OAuth credentials JSON path (optional, press Enter to skip):"
+    read -r GOOGLE_OAUTH_CREDENTIALS
 }
 
 create_env_file() {
@@ -362,6 +367,9 @@ DEEPGRAM_API_KEY=$DEEPGRAM_API_KEY
 TICKTICK_CLIENT_ID=$TICKTICK_CLIENT_ID
 TICKTICK_CLIENT_SECRET=$TICKTICK_CLIENT_SECRET
 TICKTICK_ACCESS_TOKEN=$TICKTICK_ACCESS_TOKEN
+
+# Google Calendar OAuth credentials JSON path (optional)
+GOOGLE_OAUTH_CREDENTIALS=$GOOGLE_OAUTH_CREDENTIALS
 
 # Path to Obsidian vault directory
 VAULT_PATH=./vault

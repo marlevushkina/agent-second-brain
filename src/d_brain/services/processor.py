@@ -25,6 +25,7 @@ class ClaudeProcessor:
         ticktick_access_token: str = "",
         planfix_account: str = "",
         planfix_token: str = "",
+        google_calendar_credentials: str = "",
     ) -> None:
         self.vault_path = Path(vault_path)
         self.ticktick_client_id = ticktick_client_id
@@ -32,6 +33,7 @@ class ClaudeProcessor:
         self.ticktick_access_token = ticktick_access_token
         self.planfix_account = planfix_account
         self.planfix_token = planfix_token
+        self.google_calendar_credentials = google_calendar_credentials
         self._mcp_config_path = (self.vault_path.parent / "mcp-config.json").resolve()
 
     def _build_subprocess_env(self) -> dict[str, str]:
@@ -65,6 +67,9 @@ class ClaudeProcessor:
             env["PLANFIX_ACCOUNT"] = self.planfix_account
         if self.planfix_token:
             env["PLANFIX_TOKEN"] = self.planfix_token
+        # Google Calendar credentials
+        if self.google_calendar_credentials:
+            env["GOOGLE_OAUTH_CREDENTIALS"] = self.google_calendar_credentials
         return env
 
     def _load_skill_content(self) -> str:
@@ -88,6 +93,13 @@ class ClaudeProcessor:
     def _load_planfix_reference(self) -> str:
         """Load Planfix reference for inclusion in prompt."""
         ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/planfix.md"
+        if ref_path.exists():
+            return ref_path.read_text()
+        return ""
+
+    def _load_google_calendar_reference(self) -> str:
+        """Load Google Calendar reference for inclusion in prompt."""
+        ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/google-calendar.md"
         if ref_path.exists():
             return ref_path.read_text()
         return ""
@@ -227,10 +239,11 @@ week: {year}-W{week:02d}
 ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что TickTick MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools И mcp__planfix__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools, mcp__planfix__* tools И mcp__google-calendar__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
 - Для ЛИЧНЫХ задач и менторства: mcp__ticktick__create_task
 - Для КОМАНДНЫХ задач (SMMEKALKA, C-GROWTH, KLEVERS): mcp__planfix__createTask
+- Для встреч и событий: mcp__google-calendar__create-event
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 - См. references/planfix.md для правил маршрутизации задач
 
@@ -310,6 +323,7 @@ CRITICAL OUTPUT FORMAT:
         # Load context
         ticktick_ref = self._load_ticktick_reference()
         planfix_ref = self._load_planfix_reference()
+        gcal_ref = self._load_google_calendar_reference()
         session_context = self._get_session_context(user_id)
 
         prompt = f"""Ты - персональный ассистент d-brain.
@@ -326,13 +340,18 @@ CONTEXT:
 {planfix_ref}
 === END REFERENCE ===
 
+=== GOOGLE CALENDAR REFERENCE ===
+{gcal_ref}
+=== END REFERENCE ===
+
 ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools И mcp__planfix__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools, mcp__planfix__* tools И mcp__google-calendar__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
 - Для ЛИЧНЫХ задач и менторства: mcp__ticktick__*
 - Для КОМАНДНЫХ задач (SMMEKALKA, C-GROWTH, KLEVERS): mcp__planfix__*
+- Для встреч и событий в календаре: mcp__google-calendar__*
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
 USER REQUEST:
@@ -405,10 +424,11 @@ EXECUTION:
 ПЕРВЫМ ДЕЛОМ: вызови mcp__ticktick__get_user_projects чтобы убедиться что MCP работает.
 
 CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools И mcp__planfix__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
+- ТЫ ИМЕЕШЬ ДОСТУП к mcp__ticktick__* tools, mcp__planfix__* tools И mcp__google-calendar__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
 - НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
 - Для задач в проекте: вызови mcp__ticktick__get_project_with_data tool
 - Для командных задач: вызови mcp__planfix__searchPlanfixTask tool
+- Для событий календаря: вызови mcp__google-calendar__list-events tool
 - Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
 
 WORKFLOW:
