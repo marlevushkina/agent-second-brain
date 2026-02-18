@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Google OAuth credentials
+google-calendar-credentials.json
+
 # Python
 __pycache__/
 *.py[cod]
